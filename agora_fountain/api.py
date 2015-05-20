@@ -27,7 +27,7 @@ __author__ = 'Fernando Serena'
 from flask import make_response, request, jsonify
 from rdflib import URIRef
 import agora_fountain.index.core as index
-from agora_fountain.vocab.schema import sem_g, onto_graph
+from agora_fountain.vocab.schema import sem_g
 from agora_fountain.server import app
 
 @app.route('/ontology')
@@ -40,7 +40,7 @@ def get_ontology():
 
 @app.route('/prefixes')
 def get_prefixes():
-    return jsonify(dict(onto_graph.namespaces()))
+    return jsonify(dict(sem_g.namespaces()))
 
 @app.route('/types')
 def get_types():

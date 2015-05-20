@@ -27,4 +27,4 @@ __author__ = 'Fernando Serena'
 from agora_fountain.server import app
 from agora_fountain import api
 
-app.run(host='0.0.0.0', port=app.config['PORT'], debug=False)
+app.run(host='0.0.0.0', port=app.config['PORT'], debug=True)

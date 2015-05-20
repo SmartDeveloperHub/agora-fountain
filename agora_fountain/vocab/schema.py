@@ -24,38 +24,18 @@
 
 __author__ = 'Fernando Serena'
 import os
-from rdflib_virtuoso.vstore import VirtuosoStore
 from rdflib import ConjunctiveGraph, URIRef
-from rdflib.namespace import FOAF, DC
-from StringIO import StringIO
+from rdflib.namespace import FOAF, DC, OWL, RDF, RDFS
 
 sem_g = ConjunctiveGraph()
 sem_path = '%(here)s/semantics.owl' % {"here": os.getcwd()}
-sem_g.get_context(URIRef("http://sdh/ontology#skeleton")).load(sem_path, format='turtle')
+sem_g.load(sem_path, format='turtle')
+sem_g.namespace_manager.bind('sdh', 'http://sdh/ontology#')
+sem_g.namespace_manager.bind('foaf', FOAF)
+sem_g.namespace_manager.bind('dc', DC)
 
-
-def upload_ontology(g):
-    skolem_onto = sem_g.skolemize().serialize(format='turtle')
-    g.get_context(URIRef("http://sdh/ontology#skeleton")).remove((None, None, None))
-    g.get_context(URIRef("http://sdh/ontology#skeleton")).parse(StringIO(skolem_onto), format='turtle')
-    print g.get_context(URIRef("http://sdh/ontology#skeleton")).serialize(format='turtle')
-
-vstore = VirtuosoStore('http://localhost:8890/sparql', 'http://sdh/ontology#skeleton')
-graph = ConjunctiveGraph(vstore)
-
-onto_graph = graph.get_context('http://sdh/ontology#skeleton')
-onto_graph.namespace_manager.bind('sdh', 'http://sdh/ontology#')
-onto_graph.namespace_manager.bind('foaf', FOAF)
-onto_graph.namespace_manager.bind('dc', DC)
-
-
-subjects = onto_graph.query('ASK {?s a ?Concept}')
-any_concept = [_ for _ in subjects].pop()
-
-# if not any_concept:
-upload_ontology(graph)
-
-namespaces = dict([(uri, prefix) for (prefix, uri) in onto_graph.namespaces()])
+namespaces = dict([(uri, prefix) for (prefix, uri) in sem_g.namespaces()])
+prefixes = dict([(prefix, uri) for (prefix, uri) in sem_g.namespaces()])
 
 
 def prefix_uri(uri):
@@ -67,6 +47,9 @@ def prefix_uri(uri):
             pass
     return uri
 
+def extend_prefixed(pu):
+    (p, u) = pu.split(':')
+    return URIRef(prefixes[p] + u)
 
 class Schema(object):
     def __init__(self):
@@ -74,17 +57,15 @@ class Schema(object):
 
     @property
     def prefixes(self):
-        return list(onto_graph.namespaces())
+        return list(sem_g.namespaces())
 
     @property
     def types(self):
-        res = onto_graph.query("SELECT ?c WHERE { ?c a owl:Class }")
-        for st in res:
-            yield prefix_uri(st[0])
+        return map(lambda x: prefix_uri(x), sem_g.subjects(RDF.type, OWL.Class))
 
     @property
     def properties(self):
-        res = onto_graph.query("SELECT ?c ?d WHERE { {?c a owl:ObjectProperty} UNION {?d a owl:DatatypeProperty} }")
+        res = sem_g.query("SELECT ?c ?d WHERE { {?c a owl:ObjectProperty} UNION {?d a owl:DatatypeProperty} }")
         for (c, d) in res:
             y = c
             if y is None:
@@ -93,71 +74,72 @@ class Schema(object):
 
     @staticmethod
     def get_property_domain(prop):
-        res = onto_graph.query("""SELECT ?t ?c WHERE { %s rdfs:domain ?t . %s a ?c . }""" % (prop, prop))
+        res = sem_g.query("""SELECT ?t ?c WHERE { %s rdfs:domain ?t . %s a ?c . }""" % (prop, prop))
         for (t, c) in res:
             yield prefix_uri(t)
-            sub_ts = onto_graph.query("SELECT ?c WHERE { ?c rdfs:subClassOf <%s> OPTION(TRANSITIVE) }" % str(t))
+            sub_ts = sem_g.transitive_subjects(RDFS.subClassOf, t)
             for st in sub_ts:
-                yield prefix_uri(st[0])
+                yield prefix_uri(st)
 
     @staticmethod
     def is_object_property(prop):
-        type_res = onto_graph.query("""ASK {%s a owl:ObjectProperty OPTION(TRANSITIVE)}""" % prop)
+        type_res = sem_g.query("""ASK {%s a owl:ObjectProperty}""" % prop)
         return [_ for _ in type_res].pop()
 
     @staticmethod
     def get_property_range(prop):
-        type_res = onto_graph.query("""ASK {%s a owl:ObjectProperty OPTION(TRANSITIVE)}""" % prop)
+        type_res = sem_g.query("""ASK {%s a owl:ObjectProperty}""" % prop)
         is_object = [_ for _ in type_res].pop()
 
         if is_object:
-            res = onto_graph.query("""SELECT ?t ?x WHERE { {%s rdfs:range [ owl:someValuesFrom ?t] } UNION
+            res = sem_g.query("""SELECT ?t ?x WHERE { {%s rdfs:range [ owl:someValuesFrom ?t] } UNION
                                      {%s rdfs:range [ owl:onClass ?x] } . }""" % (prop, prop))
             for (t, x) in res:
                 y = x
                 if t is not None:
                     y = t
                 yield prefix_uri(y)
-                sub_ts = onto_graph.query("SELECT ?c WHERE { ?c rdfs:subClassOf <%s> OPTION(TRANSITIVE) }" % str(y))
+                sub_ts = sem_g.transitive_subjects(RDFS.subClassOf, y)
                 for st in sub_ts:
-                    yield prefix_uri(st[0])
+                    yield prefix_uri(st)
         else:
-            res = onto_graph.query("""SELECT ?d WHERE { %s rdfs:range ?d }""" % prop)
+            res = sem_g.query("""SELECT ?d WHERE { %s rdfs:range ?d }""" % prop)
             for d in res:
                 yield prefix_uri(d[0])
 
     @staticmethod
     def get_supertypes(ty):
-        res = onto_graph.query("SELECT ?c WHERE { %s rdfs:subClassOf ?c OPTION(TRANSITIVE) }" % ty)
-        for st in res:
-            yield prefix_uri(st[0])
+        res = map(lambda x: x.n3(sem_g.namespace_manager), sem_g.transitive_objects(extend_prefixed(ty),
+                                                                                    RDFS.subClassOf))
+        return filter(lambda x: str(x) != ty, res)
 
     @staticmethod
     def get_subtypes(ty):
-        res = onto_graph.query("SELECT ?c WHERE { ?c rdfs:subClassOf %s OPTION(TRANSITIVE) }" % ty)
-        for st in res:
-            yield prefix_uri(st[0])
+        res = map(lambda x: x.n3(sem_g.namespace_manager), sem_g.transitive_subjects(RDFS.subClassOf,
+                                                                                     extend_prefixed(ty)))
+
+        return filter(lambda x: str(x) != ty, res)
 
     @staticmethod
     def get_type_properties(ty):
-        res = onto_graph.query("""SELECT ?p WHERE { ?p rdfs:domain %s OPTION(TRANSITIVE) }""" % ty)
+        res = sem_g.subjects(RDFS.domain, extend_prefixed(ty))
         for st in res:
-            yield prefix_uri(st[0])
+            yield prefix_uri(st)
 
         for sc in Schema.get_supertypes(ty):
-            res = onto_graph.query("""SELECT ?p WHERE { ?p rdfs:domain %s OPTION(TRANSITIVE) }""" % sc)
+            res = sem_g.subjects(RDFS.domain, extend_prefixed(sc))
             for st in res:
-                yield prefix_uri(st[0])
+                yield prefix_uri(st)
 
     @staticmethod
     def get_type_references(ty):
         query = """SELECT ?p WHERE { {?p rdfs:range [ owl:someValuesFrom %s]} UNION
                                       {?p rdfs:range [owl:onClass %s]}}"""
-        res = onto_graph.query(query % (ty, ty))
+        res = sem_g.query(query % (ty, ty))
         for st in res:
             yield prefix_uri(st[0])
 
         for sc in Schema.get_supertypes(ty):
-            res = onto_graph.query(query % (sc, sc))
+            res = sem_g.query(query % (sc, sc))
             for st in res:
                 yield prefix_uri(st[0])
