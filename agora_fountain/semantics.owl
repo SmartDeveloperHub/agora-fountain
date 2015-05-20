@@ -1,0 +1,326 @@
+@prefix : <http://sdh/ontology#> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix sdh: <http://sdh/ontology#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@base <http://sdh/ontology> .
+
+<http://sdh/ontology> rdf:type owl:Ontology .
+
+
+#################################################################
+#
+#    Object Properties
+#
+#################################################################
+
+
+###  http://sdh/ontology#branches
+
+sdh:branches rdf:type owl:ObjectProperty ;
+             
+             rdfs:domain sdh:BranchContainer ;
+             
+             rdfs:subPropertyOf sdh:contains ;
+             
+             rdfs:range [ rdf:type owl:Restriction ;
+                          owl:onProperty sdh:branches ;
+                          owl:someValuesFrom sdh:Branch
+                        ] .
+
+
+
+###  http://sdh/ontology#commits
+
+sdh:commits rdf:type owl:ObjectProperty ;
+            
+            rdfs:domain sdh:CommitContainer ;
+            
+            rdfs:subPropertyOf sdh:contains ;
+            
+            rdfs:range [ rdf:type owl:Restriction ;
+                         owl:onProperty sdh:commits ;
+                         owl:someValuesFrom sdh:Commit
+                       ] .
+
+
+
+###  http://sdh/ontology#contains
+
+sdh:contains rdf:type owl:ObjectProperty ;
+             
+             rdfs:domain sdh:Container ;
+             
+             rdfs:range [ rdf:type owl:Restriction ;
+                          owl:onProperty sdh:contains ;
+                          owl:someValuesFrom owl:Thing
+                        ] .
+
+
+
+###  http://sdh/ontology#hasBranches
+
+sdh:hasBranches rdf:type owl:ObjectProperty ;
+                
+                rdfs:domain sdh:Project ;
+                
+                rdfs:range [ rdf:type owl:Restriction ;
+                             owl:onProperty sdh:hasBranches ;
+                             owl:onClass sdh:BranchContainer ;
+                             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger
+                           ] .
+
+
+
+###  http://sdh/ontology#hasCommits
+
+sdh:hasCommits rdf:type owl:ObjectProperty ;
+               
+               rdfs:domain sdh:Project ;
+               
+               rdfs:range [ rdf:type owl:Restriction ;
+                            owl:onProperty sdh:hasCommits ;
+                            owl:onClass sdh:CommitContainer ;
+                            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger
+                          ] .
+
+
+
+###  http://sdh/ontology#hasMainBranch
+
+sdh:hasMainBranch rdf:type owl:ObjectProperty ;
+                  
+                  rdfs:domain sdh:Project ;
+                  
+                  rdfs:range [ rdf:type owl:Restriction ;
+                               owl:onProperty sdh:hasMainBranch ;
+                               owl:onClass sdh:Branch ;
+                               owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger
+                             ] .
+
+
+
+###  http://sdh/ontology#hasProjects
+
+sdh:hasProjects rdf:type owl:ObjectProperty ;
+                
+                rdfs:domain sdh:SCM ;
+                
+                rdfs:range [ rdf:type owl:Restriction ;
+                             owl:onProperty sdh:hasProjects ;
+                             owl:onClass sdh:ProjectContainer ;
+                             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger
+                           ] .
+
+
+
+###  http://sdh/ontology#monitorsSCM
+
+sdh:monitorsSCM rdf:type owl:ObjectProperty ;
+                
+                rdfs:domain sdh:Harvester ;
+                
+                rdfs:range [ rdf:type owl:Restriction ;
+                             owl:onProperty sdh:monitorsSCM ;
+                             owl:onClass sdh:SCM ;
+                             owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger
+                           ] .
+
+
+
+###  http://sdh/ontology#projects
+
+sdh:projects rdf:type owl:ObjectProperty ;
+             
+             rdfs:domain sdh:ProjectContainer ;
+             
+             rdfs:subPropertyOf sdh:contains ;
+             
+             rdfs:range [ rdf:type owl:Restriction ;
+                          owl:onProperty sdh:projects ;
+                          owl:someValuesFrom sdh:Project
+                        ] .
+
+
+
+
+
+#################################################################
+#
+#    Data properties
+#
+#################################################################
+
+
+###  http://purl.org/dc/elements/1.1/created
+
+dc:created rdf:type owl:DatatypeProperty ;
+           
+           rdfs:domain sdh:Contribution ;
+           
+           rdfs:range xsd:dateTime .
+
+
+
+###  http://sdh/ontology#hostUrl
+
+sdh:hostUrl rdf:type owl:DatatypeProperty ,
+                     owl:FunctionalProperty ;
+            
+            rdfs:domain sdh:Service ;
+            
+            rdfs:range xsd:string .
+
+
+
+###  http://sdh/ontology#size
+
+sdh:size rdf:type owl:DatatypeProperty ;
+         
+         rdfs:domain sdh:Container ;
+         
+         rdfs:range xsd:long .
+
+
+
+###  http://xmlns.com/foaf/0.1/name
+
+foaf:name rdf:type owl:DatatypeProperty ;
+          
+          rdfs:domain sdh:NamedItem ;
+          
+          rdfs:range xsd:string .
+
+
+
+
+
+#################################################################
+#
+#    Classes
+#
+#################################################################
+
+
+###  http://sdh/ontology#Branch
+
+sdh:Branch rdf:type owl:Class ;
+           
+           rdfs:subClassOf sdh:NamedItem .
+
+
+
+###  http://sdh/ontology#BranchContainer
+
+sdh:BranchContainer rdf:type owl:Class ;
+                    
+                    rdfs:subClassOf sdh:Container .
+
+
+
+###  http://sdh/ontology#Commit
+
+sdh:Commit rdf:type owl:Class ;
+           
+           rdfs:subClassOf sdh:Contribution .
+
+
+
+###  http://sdh/ontology#CommitContainer
+
+sdh:CommitContainer rdf:type owl:Class ;
+                    
+                    rdfs:subClassOf sdh:Container .
+
+
+
+###  http://sdh/ontology#Container
+
+sdh:Container rdf:type owl:Class .
+
+
+
+###  http://sdh/ontology#Contribution
+
+sdh:Contribution rdf:type owl:Class .
+
+
+
+###  http://sdh/ontology#Harvester
+
+sdh:Harvester rdf:type owl:Class ;
+              
+              rdfs:subClassOf sdh:Service .
+
+
+
+###  http://sdh/ontology#Issue
+
+sdh:Issue rdf:type owl:Class .
+
+
+
+###  http://sdh/ontology#Item
+
+sdh:Item rdf:type owl:Class .
+
+
+
+###  http://sdh/ontology#Metric
+
+sdh:Metric rdf:type owl:Class .
+
+
+
+###  http://sdh/ontology#NamedItem
+
+sdh:NamedItem rdf:type owl:Class ;
+              
+              rdfs:subClassOf sdh:Item .
+
+
+
+###  http://sdh/ontology#Project
+
+sdh:Project rdf:type owl:Class ;
+            
+            rdfs:subClassOf sdh:Contribution ,
+                            sdh:NamedItem .
+
+
+
+###  http://sdh/ontology#ProjectContainer
+
+sdh:ProjectContainer rdf:type owl:Class ;
+                     
+                     rdfs:subClassOf sdh:Container .
+
+
+
+###  http://sdh/ontology#SCM
+
+sdh:SCM rdf:type owl:Class ;
+        
+        rdfs:subClassOf sdh:Service .
+
+
+
+###  http://sdh/ontology#Service
+
+sdh:Service rdf:type owl:Class .
+
+
+
+###  http://sdh/ontology#User
+
+sdh:User rdf:type owl:Class .
+
+
+
+
+###  Generated by the OWL API (version 3.5.0) http://owlapi.sourceforge.net
+
