@@ -38,15 +38,6 @@ namespaces = dict([(uri, prefix) for (prefix, uri) in sem_g.namespaces()])
 prefixes = dict([(prefix, uri) for (prefix, uri) in sem_g.namespaces()])
 
 
-def prefix_uri(uri):
-    for k in namespaces.keys():
-        try:
-            if uri.startswith(k):
-                return '{}:{}'.format(namespaces.get(k), uri.replace(k, ''))
-        except Exception:
-            pass
-    return uri
-
 def extend_prefixed(pu):
     (p, u) = pu.split(':')
     return URIRef(prefixes[p] + u)
@@ -61,7 +52,7 @@ class Schema(object):
 
     @property
     def types(self):
-        return map(lambda x: prefix_uri(x), sem_g.subjects(RDF.type, OWL.Class))
+        return map(lambda x: sem_g.qname(x), sem_g.subjects(RDF.type, OWL.Class))
 
     @property
     def properties(self):
@@ -70,16 +61,16 @@ class Schema(object):
             y = c
             if y is None:
                 y = d
-            yield prefix_uri(y)
+            yield sem_g.qname(y)
 
     @staticmethod
     def get_property_domain(prop):
         res = sem_g.query("""SELECT ?t ?c WHERE { %s rdfs:domain ?t . %s a ?c . }""" % (prop, prop))
         for (t, c) in res:
-            yield prefix_uri(t)
+            yield sem_g.qname(t)
             sub_ts = sem_g.transitive_subjects(RDFS.subClassOf, t)
             for st in sub_ts:
-                yield prefix_uri(st)
+                yield sem_g.qname(st)
 
     @staticmethod
     def is_object_property(prop):
@@ -98,14 +89,14 @@ class Schema(object):
                 y = x
                 if t is not None:
                     y = t
-                yield prefix_uri(y)
+                yield sem_g.qname(y)
                 sub_ts = sem_g.transitive_subjects(RDFS.subClassOf, y)
                 for st in sub_ts:
-                    yield prefix_uri(st)
+                    yield sem_g.qname(st)
         else:
             res = sem_g.query("""SELECT ?d WHERE { %s rdfs:range ?d }""" % prop)
             for d in res:
-                yield prefix_uri(d[0])
+                yield sem_g.qname(d[0])
 
     @staticmethod
     def get_supertypes(ty):
@@ -124,12 +115,12 @@ class Schema(object):
     def get_type_properties(ty):
         res = sem_g.subjects(RDFS.domain, extend_prefixed(ty))
         for st in res:
-            yield prefix_uri(st)
+            yield sem_g.qname(st)
 
         for sc in Schema.get_supertypes(ty):
             res = sem_g.subjects(RDFS.domain, extend_prefixed(sc))
             for st in res:
-                yield prefix_uri(st)
+                yield sem_g.qname(st)
 
     @staticmethod
     def get_type_references(ty):
@@ -137,9 +128,9 @@ class Schema(object):
                                       {?p rdfs:range [owl:onClass %s]}}"""
         res = sem_g.query(query % (ty, ty))
         for st in res:
-            yield prefix_uri(st[0])
+            yield sem_g.qname(st[0])
 
         for sc in Schema.get_supertypes(ty):
             res = sem_g.query(query % (sc, sc))
             for st in res:
-                yield prefix_uri(st[0])
+                yield sem_g.qname(st[0])
