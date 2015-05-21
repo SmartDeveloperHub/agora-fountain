@@ -58,19 +58,17 @@ class Schema(object):
     def properties(self):
         res = sem_g.query("SELECT ?c ?d WHERE { {?c a owl:ObjectProperty} UNION {?d a owl:DatatypeProperty} }")
         for (c, d) in res:
-            y = c
-            if y is None:
-                y = d
+            y = c or d
             yield sem_g.qname(y)
 
     @staticmethod
     def get_property_domain(prop):
-        res = sem_g.query("""SELECT ?t ?c WHERE { %s rdfs:domain ?t . %s a ?c . }""" % (prop, prop))
-        for (t, c) in res:
-            yield sem_g.qname(t)
-            sub_ts = sem_g.transitive_subjects(RDFS.subClassOf, t)
-            for st in sub_ts:
-                yield sem_g.qname(st)
+        res = map(lambda x: sem_g.qname(x), sem_g.objects(extend_prefixed(prop), RDFS.domain))
+        dom = set([])
+        for t in res:
+            dom.update(Schema.get_subtypes(t))
+            dom.add(t)
+        return dom
 
     @staticmethod
     def is_object_property(prop):
@@ -79,58 +77,44 @@ class Schema(object):
 
     @staticmethod
     def get_property_range(prop):
-        type_res = sem_g.query("""ASK {%s a owl:ObjectProperty}""" % prop)
-        is_object = [_ for _ in type_res].pop()
-
-        if is_object:
-            res = sem_g.query("""SELECT ?t ?x WHERE { {%s rdfs:range [ owl:someValuesFrom ?t] } UNION
-                                     {%s rdfs:range [ owl:onClass ?x] } . }""" % (prop, prop))
-            for (t, x) in res:
-                y = x
-                if t is not None:
-                    y = t
-                yield sem_g.qname(y)
-                sub_ts = sem_g.transitive_subjects(RDFS.subClassOf, y)
-                for st in sub_ts:
-                    yield sem_g.qname(st)
+        if Schema.is_object_property(prop):
+            res = map(lambda (t, x): t or x, sem_g.query("""SELECT ?t ?x WHERE { {%s rdfs:range [ owl:someValuesFrom ?t] } UNION
+                                     {%s rdfs:range [ owl:onClass ?x] } . }""" % (prop, prop)))
+            sub_ts = set([])
+            for y in res:
+                sub_ts.update(map(lambda z: sem_g.qname(z), sem_g.transitive_subjects(RDFS.subClassOf, y)))
+                sub_ts.add(sem_g.qname(y))
+            return sub_ts
         else:
-            res = sem_g.query("""SELECT ?d WHERE { %s rdfs:range ?d }""" % prop)
-            for d in res:
-                yield sem_g.qname(d[0])
+            return map(lambda w: sem_g.qname(w), sem_g.objects(extend_prefixed(prop), RDFS.range))
 
     @staticmethod
     def get_supertypes(ty):
-        res = map(lambda x: x.n3(sem_g.namespace_manager), sem_g.transitive_objects(extend_prefixed(ty),
-                                                                                    RDFS.subClassOf))
+        res = map(lambda x: str(x.n3(sem_g.namespace_manager)),
+                  sem_g.transitive_objects(extend_prefixed(ty), RDFS.subClassOf))
         return filter(lambda x: str(x) != ty, res)
 
     @staticmethod
     def get_subtypes(ty):
-        res = map(lambda x: x.n3(sem_g.namespace_manager), sem_g.transitive_subjects(RDFS.subClassOf,
-                                                                                     extend_prefixed(ty)))
+        res = map(lambda x: x.n3(sem_g.namespace_manager),
+                  sem_g.transitive_subjects(RDFS.subClassOf, extend_prefixed(ty)))
 
         return filter(lambda x: str(x) != ty, res)
 
     @staticmethod
     def get_type_properties(ty):
-        res = sem_g.subjects(RDFS.domain, extend_prefixed(ty))
-        for st in res:
-            yield sem_g.qname(st)
-
+        res = map(lambda x: sem_g.qname(x), sem_g.subjects(RDFS.domain, extend_prefixed(ty)))
         for sc in Schema.get_supertypes(ty):
-            res = sem_g.subjects(RDFS.domain, extend_prefixed(sc))
-            for st in res:
-                yield sem_g.qname(st)
+            res.extend(map(lambda x: sem_g.qname(x), sem_g.subjects(RDFS.domain, extend_prefixed(sc))))
+
+        return res
 
     @staticmethod
     def get_type_references(ty):
         query = """SELECT ?p WHERE { {?p rdfs:range [ owl:someValuesFrom %s]} UNION
                                       {?p rdfs:range [owl:onClass %s]}}"""
-        res = sem_g.query(query % (ty, ty))
-        for st in res:
-            yield sem_g.qname(st[0])
-
+        res = map(lambda x: sem_g.qname(x[0]), sem_g.query(query % (ty, ty)))
         for sc in Schema.get_supertypes(ty):
-            res = sem_g.query(query % (sc, sc))
-            for st in res:
-                yield sem_g.qname(st[0])
+            res.extend(map(lambda x: sem_g.qname(x[0]), sem_g.query(query % (sc, sc))))
+
+        return res
