@@ -25,7 +25,6 @@
 __author__ = 'Fernando Serena'
 
 from flask import make_response, request, jsonify
-from rdflib import URIRef
 import agora_fountain.index.core as index
 from agora_fountain.vocab.schema import sem_g
 from agora_fountain.server import app
@@ -36,7 +35,7 @@ def get_ontology():
     Return the currently used ontology
     :return:
     """
-    response = make_response(sem_g.get_context(URIRef("http://sdh/ontology#skeleton")).serialize(format='turtle'))
+    response = make_response(sem_g.serialize(format='turtle'))
     response.headers['Content-Type'] = 'text/turtle'
 
     return response
