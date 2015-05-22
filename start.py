@@ -2,7 +2,7 @@
 """
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
   This file is part of the Smart Developer Hub Project:
-    https://smartdeveloperhub.github.io
+    http://www.smartdeveloperhub.org
 
   Center for Open Middleware
         http://www.centeropenmiddleware.com/
