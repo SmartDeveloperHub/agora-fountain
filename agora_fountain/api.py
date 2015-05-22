@@ -32,6 +32,10 @@ from agora_fountain.server import app
 
 @app.route('/ontology')
 def get_ontology():
+    """
+    Return the currently used ontology
+    :return:
+    """
     response = make_response(sem_g.get_context(URIRef("http://sdh/ontology#skeleton")).serialize(format='turtle'))
     response.headers['Content-Type'] = 'text/turtle'
 
@@ -40,25 +44,47 @@ def get_ontology():
 
 @app.route('/prefixes')
 def get_prefixes():
+    """
+    Return the prefixes dictionary of the ontology
+    :return:
+    """
     return jsonify(dict(sem_g.namespaces()))
 
 @app.route('/types')
 def get_types():
+    """
+    Return the list of supported types (prefixed)
+    :return:
+    """
     return jsonify({"types": index.get_types()})
 
 
 @app.route('/types/<string:t>')
 def get_type(t):
+    """
+    Return a concrete type description
+    :param t: prefixed type e.g. foaf:Person
+    :return: description of 't'
+    """
     return jsonify(index.get_type(t))
 
 
 @app.route('/properties')
 def get_properties():
+    """
+    Return the list of supported properties (prefixed)
+    :return:
+    """
     return jsonify({"properties": index.get_properties()})
 
 
 @app.route('/properties/<string:prop>')
 def get_property(prop):
+    """
+    Return a concrete property description
+    :param prop: prefixed property e.g. foaf:name
+    :return: description of 'prop'
+    """
     p = index.get_property(prop)
 
     return jsonify(p)
@@ -66,16 +92,29 @@ def get_property(prop):
 
 @app.route('/seeds')
 def get_seeds():
+    """
+    Return the complete list of seeds available
+    :return:
+    """
     return jsonify({"seeds": index.get_seeds()})
 
 
 @app.route('/seeds/<string:ty>')
 def get_type_seeds(ty):
+    """
+    Return the list of seeds of a certain type
+    :param ty: prefixed required type e.g. foaf:Person
+    :return:
+    """
     return jsonify({"seeds": index.get_type_seeds(ty)})
 
 
 @app.route('/seeds', methods=['POST'])
 def add_seed():
+    """
+    Add a new seed of a specific supported type
+    :return:
+    """
     data = request.json
     index.add_seed(data.get('uri', None), data.get('type', None))
     return make_response()
@@ -83,6 +122,11 @@ def add_seed():
 
 @app.route('/paths/<elm>')
 def get_path(elm):
+    """
+    Return a path to a specific elem (either a property or a type, always prefixed)
+    :param elm: The required prefixed type/property
+    :return:
+    """
     path_keys = index.r.keys('paths:{}:*'.format(elm))
     paths = []
     seed_paths = []
