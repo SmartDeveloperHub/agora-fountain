@@ -50,16 +50,16 @@ def build_type_paths(ty):
         for r in refs:
             yield build_property_paths(r)
 
-    paths = []
+    paths = list([])
     type_rep = index.get_type(ty)
     ty_refs = type_rep.get('refs')
-    for ps in build_path(ty_refs):
-            paths.extend(ps)
+    for p in build_path(ty_refs):
+        paths.extend(p)
 
     for sub in type_rep.get('sub'):
         refs = index.get_type(sub).get('refs')
-        for ps in build_path(refs):
-            paths.extend(ps)
+        for p in build_path(refs):
+            paths.extend(p)
 
     return paths
 
@@ -86,4 +86,4 @@ for ty in types:
         for i, path in enumerate(paths):
             index.r.set('paths:{}:{}'.format(ty, i), path)
 
-print 'Done!'
+print 'Ready.'
