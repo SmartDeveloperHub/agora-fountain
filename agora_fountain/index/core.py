@@ -40,39 +40,49 @@ r.flushall()
 # Populate the database with the ontology types and properties
 print 'Analysing the ontology and populating the database...'
 
+print 'Collecting type descriptions:'
 for t in sch.types:
+    print 'type {}:'.format(t)
     pipe.sadd('types', t)
     t_supertypes = sch.get_supertypes(t)
     for s in t_supertypes:
         pipe.sadd('types:{}:super'.format(t), s)
+        print '\tsupertype {}'.format(s)
     t_subtypes = sch.get_subtypes(t)
     for s in t_subtypes:
         pipe.sadd('types:{}:sub'.format(t), s)
+        print '\tsubtype {}'.format(s)
     t_properties = sch.get_type_properties(t)
     for s in t_properties:
         pipe.sadd('types:{}:props'.format(t), s)
+        print '\tproperty {}'.format(s)
     t_incomes = sch.get_type_references(t)
     for s in t_incomes:
         pipe.sadd('types:{}:refs'.format(t), s)
+        print '\tref {}'.format(s)
     pipe.execute()
 
+print 'Collecting property descriptions:'
 for p in sch.properties:
+    print 'property {}:'.format(p)
     pipe.sadd('properties', p)
     pipe.hset('properties:{}'.format(p), 'uri', p)
     p_domain = list(sch.get_property_domain(p))
     for dc in p_domain:
+        print '\tdomain {}'.format(dc)
         pipe.sadd('properties:{}:domain'.format(p), dc)
 
     p_range = list(sch.get_property_range(p))
     for dc in p_range:
+        print '\trange {}'.format(dc)
         pipe.sadd('properties:{}:range'.format(p), dc)
     type_value = 'data'
     if sch.is_object_property(p):
         type_value = 'object'
+    print '\ttype {}'.format(type_value)
     pipe.set('properties:{}:type'.format(p), type_value)
     pipe.execute()
 
-print 'Done!'
 
 def get_types():
     return list(r.smembers('types'))
