@@ -1,3 +1,4 @@
+#!.env/bin/python
 """
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
   This file is part of the Smart Developer Hub Project:
@@ -27,4 +28,4 @@ __author__ = 'Fernando Serena'
 from agora_fountain.server import app
 from agora_fountain import api
 
-app.run(host='0.0.0.0', port=app.config['PORT'], debug=True)
+app.run(host='0.0.0.0', port=app.config['PORT'], debug=False)
