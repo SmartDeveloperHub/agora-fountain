@@ -1,281 +1,119 @@
-@prefix : <http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#> .
-@prefix owl: <http://www.w3.org/2002/07/owl#> .
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix scm: <http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#> .
-@prefix xml: <http://www.w3.org/XML/1998/namespace> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix doap: <http://usefulinc.com/ns/doap#> .
-@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+#
+# #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
+#   This file is part of the Smart Developer Hub Project:
+#     http://www.smartdeveloperhub.org/
+#
+#   Center for Open Middleware
+#     http://www.centeropenmiddleware.com/
+# #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
+#   Copyright (C) 2015 Center for Open Middleware.
+# #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#             http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+# #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
+#   Artifact    : org.smartdeveloperhub.vocabulary:sdh-vocabulary:1.0.0-SNAPSHOT
+#   Bundle      : sdh-vocabulary-1.0.0-SNAPSHOT.jar
+# #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
+#
+
+##----------------------------------------------------------------------------##
+#     __    __    __    __    __    __    __    __    __    __    __    __     #
+#  __/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__  #
+# /  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \ #
+# \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/ #
+# /  \__/                                                                 /  \ #
+# \__/                     _____                      __                  \__/ #
+# /  \                    / ___/____ ___  ____ ______/ /_                 /  \ #
+# \__/                    \__ \/ __ `__ \/ __ `/ ___/ __/                 \__/ #
+# /  \                   ___/ / / / / / / /_/ / /  / /_                   /  \ #
+# \__/    ____          /____/_/_/_/ /_/\__,_/_/   \__/   __  __      __  \__/ #
+# /  \   / __ \___ _   _____  / /___  ____  ___  _____   / / / /_  __/ /_ /  \ #
+# \__/  / / / / _ \ | / / _ \/ / __ \/ __ \/ _ \/ ___/  / /_/ / / / / __ \\__/ #
+# /  \ / /_/ /  __/ |/ /  __/ / /_/ / /_/ /  __/ /     / __  / /_/ / /_/ //  \ #
+# \__//_____/\___/|___/\___/_/\____/ .___/\___/_/     /_/ /_/\__,_/_.___/ \__/ #
+# /  \                            /_/                                     /  \ #
+# \__/                __   __        __                  __               \__/ #
+# /  \          \  / /  \ /  `  /\  |__) |  | |     /\  |__) \ /          /  \ #
+# \__/           \/  \__/ \__, /~~\ |__) \__/ |___ /~~\ |  \  |           \__/ #
+# /  \__                                                                  /  \ #
+# \__/  \__    __    __    __    __    __    __    __    __    __    __   \__/ #
+# /  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \ #
+# \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/ #
+#    \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/  \__/    #
+#                                                                              #
+##----------------------------------------------------------------------------##
+#   __   __           __   __                            __   __   ___         #
+#  /__` /  ` |\/|    |  \ /  \ |\/|  /\  | |\ |    |\/| /  \ |  \ |__  |       #
+#  .__/ \__, |  |    |__/ \__/ |  | /~~\ | | \|    |  | \__/ |__/ |___ |___    #
+#        __   __             ___                                               #
+#  |\/| /  \ |  \ |  | |    |__                                                #
+#  |  | \__/ |__/ \__/ |___ |___                                               # 
+#                                                                              #
+##----------------------------------------------------------------------------##
+
+##-- PREFIXES ----------------------------------------------------------------##
+
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@base <http://www.centeropenmiddleware.com/ontology/2015/scm> .
-
-<http://www.centeropenmiddleware.com/ontology/2015/scm> rdf:type owl:Ontology ;
-                                                        
-                                                        rdfs:comment """This ontology models a part of the concepts involved in a SCM system. We have resctricted the ontoloy to the concepts and the relations needed by the system to calculate the following set of metrics:
-
-(Global) Average commits per project
-(User) Average commits per project
-(Global) Average committers per project
-(Global) Total commits
-(Project) Time since last commit
-(Project) Total commits"""@en ;
-                                                        
-                                                        owl:imports doap: .
-
-
-#################################################################
-#
-#    Object Properties
-#
-#################################################################
-
-
-###  http://usefulinc.com/ns/doap#location
-
-doap:location rdf:type owl:ObjectProperty .
-
-
-
-###  http://usefulinc.com/ns/doap#repository
-
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#codebase
-
-:codebase rdf:type owl:ObjectProperty ;
-          
-          rdfs:domain doap:Repository ;
-          
-          rdfs:range rdfs:Resource .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#defaultBranch
-
-:defaultBranch rdf:type owl:ObjectProperty ;
-               
-               rdfs:domain doap:Repository ;
-               
-               rdfs:range :Branch .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#hasBranch
-
-:hasBranch rdf:type owl:ObjectProperty ;
-           
-           rdfs:domain doap:Repository ;
-           
-           rdfs:range :Branch .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#hasCommit
-
-:hasCommit rdf:type owl:ObjectProperty ;
-           
-           rdfs:range :Commit .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#isRepositoryOf
-
-:isRepositoryOf rdf:type owl:ObjectProperty ;
-                
-                rdfs:range doap:Project ;
-                
-                rdfs:domain doap:Repository ;
-                
-                owl:inverseOf doap:repository .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#isSourceOf
-
-:isSourceOf rdf:type owl:ObjectProperty ;
-            
-            rdfs:domain :Branch ;
-            
-            rdfs:range :Merge .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#isTargetOf
-
-:isTargetOf rdf:type owl:ObjectProperty ;
-            
-            rdfs:range :Action ;
-            
-            rdfs:domain :Branch .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#mergeCommit
-
-:mergeCommit rdf:type owl:ObjectProperty ;
-             
-             rdfs:range :Commit ;
-             
-             rdfs:domain :TrueMerge .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#performedBy
-
-:performedBy rdf:type owl:ObjectProperty ;
-             
-             rdfs:domain :Action ;
-             
-             rdfs:range foaf:Person .
-
-
-
-
-
-#################################################################
-#
-#    Data properties
-#
-#################################################################
-
-
-###  http://usefulinc.com/ns/doap#name
-
-doap:name rdf:type owl:DatatypeProperty .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#LastBuildDate
-
-:LastBuildDate rdf:type owl:DatatypeProperty ;
-               
-               rdfs:subPropertyOf :date .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#createdOn
-
-:createdOn rdf:type owl:DatatypeProperty ;
-           
-           rdfs:subPropertyOf :date .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#date
-
-:date rdf:type owl:DatatypeProperty ;
-      
-      rdfs:range xsd:dateTime .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#defaultBranchName
-
-:defaultBranchName rdf:type owl:DatatypeProperty ;
-                   
-                   rdfs:domain doap:Repository ;
-                   
-                   rdfs:range xsd:string .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#firstCommit
-
-:firstCommit rdf:type owl:DatatypeProperty ;
-             
-             rdfs:subPropertyOf :date .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#id
-
-:id rdf:type owl:DatatypeProperty ;
-    
-    rdfs:range xsd:string .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#isArchived
-
-:isArchived rdf:type owl:DatatypeProperty ;
-            
-            rdfs:range xsd:boolean .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#isPublic
-
-:isPublic rdf:type owl:DatatypeProperty ;
-          
-          rdfs:range xsd:boolean .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#lastBuildStatus
-
-:lastBuildStatus rdf:type owl:DatatypeProperty ;
-                 
-                 rdfs:range xsd:string .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#lastCommit
-
-:lastCommit rdf:type owl:DatatypeProperty ;
-            
-            rdfs:subPropertyOf :date .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#projectId
-
-:projectId rdf:type owl:DatatypeProperty ;
-           
-           rdfs:subPropertyOf :id .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#repositoryId
-
-:repositoryId rdf:type owl:DatatypeProperty ;
-              
-              rdfs:subPropertyOf :id .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#signUpDate
-
-:signUpDate rdf:type owl:DatatypeProperty ;
-            
-            rdfs:subPropertyOf :date .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#tags
-
-:tags rdf:type owl:DatatypeProperty ;
-      
-      rdfs:range xsd:string .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#userId
-
-:userId rdf:type owl:DatatypeProperty ;
-        
-        rdfs:subPropertyOf :id .
-
-
-
-
-
-#################################################################
-#
-#    Classes
-#
-#################################################################
-
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix sdh:      <http://www.smartdeveloperhub.org/vocabulary/sdh#> .
+@prefix platform: <http://www.smartdeveloperhub.org/vocabulary/platform#> .
+@prefix ci:       <http://www.smartdeveloperhub.org/vocabulary/ci#> .
+@prefix scm:      <http://www.smartdeveloperhub.org/vocabulary/scm#> .
+@prefix org:      <http://www.smartdeveloperhub.org/vocabulary/organization#> .
+@prefix metrics:  <http://www.smartdeveloperhub.org/vocabulary/metrics#> .
+
+@prefix oslc:        <http://open-services.net/ns/core#> .
+@prefix oslc_auto:   <http://open-services.net/ns/auto#> .
+@prefix oslc_asset:  <http://open-services.net/ns/asset#> .
+@prefix oslc_config: <http://open-services.net/ns/config#> .
+
+@prefix doap:    <http://usefulinc.com/ns/doap#> .
+@prefix foaf:    <http://xmlns.com/foaf/0.1/> .
+@prefix dcterms: <http://purl.org/dc/terms/> . 
+
+# PROV ontology
+@prefix prov: <http://www.w3.org/ns/prov#> .
+# Dublin Core Metadata Element Set, Version 1.1
+@prefix dc:   <http://purl.org/dc/elements/1.1/> .
+# Web of Trust Ontology
+@prefix wot:  <http://xmlns.com/wot/0.1/> . 
+# SemWeb Vocab Status Ontology
+@prefix vs:   <http://www.w3.org/2003/06/sw-vocab-status/ns#> .
+# Resource Directory Description Language (RDDL)
+@prefix rddl: <http://www.rddl.org/> .
+
+##-- MODULE DECLARATION ------------------------------------------------------##
+@prefix :  <http://www.smartdeveloperhub.org/vocabulary/scm#> .
+@base <http://www.smartdeveloperhub.org/vocabulary/> .
+
+<scm> rdf:type owl:Ontology ;
+  owl:versionIRI <v1/scm> ;
+  owl:imports <external/doap/doap.rdf> ;
+  rdfs:comment """This ontology models a part of the concepts involved in a SCM system. 
+                  We have resctricted the ontology to the concepts and the relations needed by
+                  the system to calculate the following set of metrics:
+                  (Global) Average commits per project
+                  (User) Average commits per project
+                  (Global) Average committers per project
+                  (Global) Total commits
+                  (Project) Time since last commit
+                  (Project) Total commits"""@en .     
+
+##-- ENUMERATIONS-------------------------------------------------------------##
+
+##-- CLASSES -----------------------------------------------------------------##
 
 ###  http://usefulinc.com/ns/doap#Project
 
@@ -289,8 +127,6 @@ doap:Project rdfs:subClassOf [ rdf:type owl:Restriction ;
                                owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
                                owl:onDataRange xsd:dateTime
                              ] .
-
-
 
 ###  http://usefulinc.com/ns/doap#Repository
 
@@ -327,7 +163,7 @@ doap:Repository rdf:type owl:Class ;
                                 [ rdf:type owl:Restriction ;
                                   owl:onProperty :isPublic ;
                                   owl:maxQualifiedCardinality "1"^^xsd:nonNegativeInteger ;
-                                  owl:onDataRange xsd:string
+                                  owl:onDataRange xsd:boolean
                                 ] ,
                                 [ rdf:type owl:Restriction ;
                                   owl:onProperty :firstCommit ;
@@ -371,7 +207,7 @@ doap:Repository rdf:type owl:Class ;
                                 [ rdf:type owl:Restriction ;
                                   owl:onProperty :isArchived ;
                                   owl:maxQualifiedCardinality "1"^^xsd:nonNegativeInteger ;
-                                  owl:onDataRange xsd:string
+                                  owl:onDataRange xsd:boolean
                                 ] ,
                                 [ rdf:type owl:Restriction ;
                                   owl:onProperty foaf:depiction ;
@@ -526,203 +362,248 @@ foaf:Person rdfs:subClassOf [ rdf:type owl:Restriction ;
                               owl:onDataRange xsd:string
                             ] .
 
-
-
-
+##-- PROPERTIES --------------------------------------------------------------##
 
 #################################################################
 #
-#    Individuals
+#    Data properties
 #
 #################################################################
 
 
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#Branch01
+###  http://usefulinc.com/ns/doap#name
 
-:Branch01 rdf:type :Branch ,
-                   owl:NamedIndividual ;
+doap:name rdf:type owl:DatatypeProperty .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#LastBuildDate
+
+:LastBuildDate rdf:type owl:DatatypeProperty ;
+               
+               rdfs:subPropertyOf :date .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#createdOn
+
+:createdOn rdf:type owl:DatatypeProperty ;
+           
+           rdfs:subPropertyOf :date .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#date
+
+:date rdf:type owl:DatatypeProperty ;
+      
+      rdfs:range xsd:dateTime .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#defaultBranchName
+
+:defaultBranchName rdf:type owl:DatatypeProperty ;
+                   
+                   rdfs:domain doap:Repository ;
+                   
+                   rdfs:range xsd:string .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#firstCommit
+
+:firstCommit rdf:type owl:DatatypeProperty ;
+             
+             rdfs:subPropertyOf :date .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#id
+
+:id rdf:type owl:DatatypeProperty ;
+    
+    rdfs:range xsd:string .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#isArchived
+
+:isArchived rdf:type owl:DatatypeProperty ;
+            
+            rdfs:range xsd:boolean .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#isPublic
+
+:isPublic rdf:type owl:DatatypeProperty ;
           
-          :createdOn "2015-05-04T09:00:00Z"^^xsd:dateTime ;
+          rdfs:range xsd:boolean .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#lastBuildStatus
+
+:lastBuildStatus rdf:type owl:DatatypeProperty ;
+                 
+                 rdfs:range xsd:string .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#lastCommit
+
+:lastCommit rdf:type owl:DatatypeProperty ;
+            
+            rdfs:subPropertyOf :date .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#projectId
+
+:projectId rdf:type owl:DatatypeProperty ;
+           
+           rdfs:subPropertyOf :id .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#repositoryId
+
+:repositoryId rdf:type owl:DatatypeProperty ;
+              
+              rdfs:subPropertyOf :id .
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#signUpDate
+
+:signUpDate rdf:type owl:DatatypeProperty ;
+            
+            rdfs:subPropertyOf :date .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#tags
+
+:tags rdf:type owl:DatatypeProperty ;
+      
+      rdfs:range xsd:string .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#userId
+
+:userId rdf:type owl:DatatypeProperty ;
+        
+        rdfs:subPropertyOf :id .
+        
+#################################################################
+#
+#    Object Properties
+#
+#################################################################
+
+
+###  http://usefulinc.com/ns/doap#location
+
+doap:location rdf:type owl:ObjectProperty .
+
+
+
+###  http://usefulinc.com/ns/doap#repository
+
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#codebase
+
+:codebase rdf:type owl:ObjectProperty ;
           
-          rdfs:comment "Master Branch of transaction module"@en ;
+          rdfs:domain doap:Repository ;
           
-          :isTargetOf :FastForward01 ,
-                      :FastForward02 ,
-                      :FastForward03 ,
-                      :FastForwardCommit01 ,
-                      :FastForwardCommit02 ,
-                      :FastForwardCommit03 ,
-                      :TrueMerge01 ,
-                      :TrueMerge02 ,
-                      :TrueMergeCommit01 ,
-                      :TrueMergeCommit02 .
+          rdfs:range rdfs:Resource .
 
 
 
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#Developer01
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#defaultBranch
 
-:Developer01 rdf:type owl:NamedIndividual ,
-                      foaf:Person .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#Developer02
-
-:Developer02 rdf:type owl:NamedIndividual ,
-                      foaf:Person .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#FastForward01
-
-:FastForward01 rdf:type :Action ,
-                        :FastForward ,
-                        :Merge ,
-                        owl:NamedIndividual ;
+:defaultBranch rdf:type owl:ObjectProperty ;
                
-               :createdOn "2015-05-04T09:00:00Z"^^xsd:dateTime ;
+               rdfs:domain doap:Repository ;
                
-               :performedBy :Developer01 ;
-               
-               :hasCommit :FastForwardCommit01 .
+               rdfs:range :Branch .
 
 
 
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#FastForward02
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#hasBranch
 
-:FastForward02 rdf:type :Action ,
-                        :FastForward ,
-                        :Merge ,
-                        owl:NamedIndividual ;
-               
-               :createdOn "2015-05-05T10:00:00Z"^^xsd:dateTime ;
-               
-               :performedBy :Developer02 ;
-               
-               :hasCommit :FastForwardCommit02 .
+:hasBranch rdf:type owl:ObjectProperty ;
+           
+           rdfs:domain doap:Repository ;
+           
+           rdfs:range :Branch .
 
 
 
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#FastForward03
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#hasCommit
 
-:FastForward03 rdf:type :Action ,
-                        :FastForward ,
-                        :Merge ,
-                        owl:NamedIndividual ;
-               
-               :createdOn "2015-05-05T11:00:00Z"^^xsd:dateTime ;
-               
-               :performedBy :Developer02 ;
-               
-               :hasCommit :FastForwardCommit03 .
+:hasCommit rdf:type owl:ObjectProperty ;
+           
+           rdfs:range :Commit .
 
 
 
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#FastForwardCommit01
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#isRepositoryOf
 
-:FastForwardCommit01 rdf:type :Action ,
-                              :Commit ,
-                              owl:NamedIndividual ;
-                     
-                     :createdOn "2015-05-04T09:00:00Z"^^xsd:dateTime ;
-                     
-                     :performedBy :Developer01 .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#FastForwardCommit02
-
-:FastForwardCommit02 rdf:type :Action ,
-                              :Commit ,
-                              owl:NamedIndividual ;
-                     
-                     :createdOn "2015-05-05T10:00:00Z"^^xsd:dateTime ;
-                     
-                     :performedBy :Developer02 .
+:isRepositoryOf rdf:type owl:ObjectProperty ;
+                
+                rdfs:range doap:Project ;
+                
+                rdfs:domain doap:Repository ;
+                
+                owl:inverseOf doap:repository .
 
 
 
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#FastForwardCommit03
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#isSourceOf
 
-:FastForwardCommit03 rdf:type :Action ,
-                              :Commit ,
-                              owl:NamedIndividual ;
-                     
-                     :createdOn "2015-05-05T11:00:00Z"^^xsd:dateTime ;
-                     
-                     :performedBy :Developer02 .
+:isSourceOf rdf:type owl:ObjectProperty ;
+            
+            rdfs:domain :Branch ;
+            
+            rdfs:range :Merge .
 
 
 
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#Repo01
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#isTargetOf
 
-:Repo01 rdf:type doap:Repository ,
-                 owl:NamedIndividual ;
-        
-        :createdOn "2015-05-04T09:00:00Z"^^xsd:dateTime ;
-        
-        rdfs:comment "Example transaction repository"@en ;
-        
-        doap:name "TransactionsRepo"@en ;
-        
-        :hasBranch :Branch01 .
+:isTargetOf rdf:type owl:ObjectProperty ;
+            
+            rdfs:range :Action ;
+            
+            rdfs:domain :Branch .
 
 
 
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#TrueMerge01
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#mergeCommit
 
-:TrueMerge01 rdf:type :Action ,
-                      :Merge ,
-                      :TrueMerge ,
-                      owl:NamedIndividual ;
+:mergeCommit rdf:type owl:ObjectProperty ;
              
-             :createdOn "2015-05-04T09:00:00Z"^^xsd:dateTime ;
+             rdfs:range :Commit ;
              
-             :performedBy :Developer01 ;
+             rdfs:domain :TrueMerge .
+
+
+
+###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#performedBy
+
+:performedBy rdf:type owl:ObjectProperty ;
              
-             :mergeCommit :TrueMergeCommit01 .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#TrueMerge02
-
-:TrueMerge02 rdf:type :Action ,
-                      :Merge ,
-                      :TrueMerge ,
-                      owl:NamedIndividual ;
+             rdfs:domain :Action ;
              
-             :createdOn "2015-05-05T10:00:00Z"^^xsd:dateTime ;
-             
-             :performedBy :Developer02 ;
-             
-             :mergeCommit :TrueMergeCommit02 .
+             rdfs:range foaf:Person .        
 
+##-- INDIVIDUALS--------------------------------------------------------------##
 
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#TrueMergeCommit01
-
-:TrueMergeCommit01 rdf:type :Action ,
-                            :Commit ,
-                            owl:NamedIndividual ;
-                   
-                   :createdOn "2015-05-04T09:00:00Z"^^xsd:dateTime ;
-                   
-                   :performedBy :Developer01 .
-
-
-
-###  http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#TrueMergeCommit02
-
-:TrueMergeCommit02 rdf:type :Action ,
-                            :Commit ,
-                            owl:NamedIndividual ;
-                   
-                   :createdOn "2015-05-05T10:00:00Z"^^xsd:dateTime ;
-                   
-                   :performedBy :Developer02 .
-
-
-
-
-###  Generated by the OWL API (version 3.5.1) http://owlapi.sourceforge.net
-
+##----------------------------------------------------------------------------##
+#  MODULE END                                                                  #
+##----------------------------------------------------------------------------##
