@@ -21,6 +21,7 @@
   limitations under the License.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
+import StringIO
 
 __author__ = 'Fernando Serena'
 import os
@@ -29,14 +30,14 @@ from rdflib.namespace import FOAF, DC, OWL, RDF, RDFS, XSD
 
 print 'Loading ontology...',
 sem_g = ConjunctiveGraph()
-sem_path = '%(here)s/semantics.owl' % {"here": os.getcwd()}
-sem_g.load(sem_path, format='turtle')
+# sem_path = '%(here)s/semantics.owl' % {"here": os.getcwd()}
+# sem_g.load(sem_path, format='turtle')
 # sem_g.namespace_manager.bind('sdh', 'http://sdh/ontology#')
-sem_g.namespace_manager.bind('scm', 'http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#')
-sem_g.namespace_manager.bind('foaf', FOAF)
-sem_g.namespace_manager.bind('dc', DC)
-sem_g.namespace_manager.bind('xsd', XSD)
-sem_g.namespace_manager.bind('doap', 'http://usefulinc.com/ns/doap#')
+# sem_g.namespace_manager.bind('scm', 'http://www.smartdeveloperhub.org/vocabulary/sdh/v1/scm#')
+# sem_g.namespace_manager.bind('foaf', FOAF)
+# sem_g.namespace_manager.bind('dc', DC)
+# sem_g.namespace_manager.bind('xsd', XSD)
+# sem_g.namespace_manager.bind('doap', 'http://usefulinc.com/ns/doap#')
 
 namespaces = dict([(uri, prefix) for (prefix, uri) in sem_g.namespaces()])
 prefixes = dict([(prefix, uri) for (prefix, uri) in sem_g.namespaces()])
@@ -44,7 +45,6 @@ prefixes = dict([(prefix, uri) for (prefix, uri) in sem_g.namespaces()])
 print sem_g.serialize(format='turtle')
 
 print 'Done.'
-
 
 def qname(uri):
     q = uri.n3(sem_g.namespace_manager)
@@ -66,14 +66,14 @@ class Schema(object):
     def __init__(self):
         pass
 
-    @property
-    def prefixes(self):
-        return list(sem_g.namespaces())
+    @staticmethod
+    def get_prefixes(self, vid=None):
+        return list(sem_g.get_context(vid).namespaces())
 
-    @property
-    def types(self):
+    @staticmethod
+    def get_types(self, vid=None):
         res = set([])
-        res.update([qname(x) for x in sem_g.subjects(RDF.type, OWL.Class) if isinstance(x, URIRef)])
+        res.update([qname(x) for x in sem_g.get_context(vid).subjects(RDF.type, OWL.Class) if isinstance(x, URIRef)])
         res.update([qname(x[0]) for x in
                     sem_g.query("""SELECT ?o WHERE {?p a owl:ObjectProperty. ?p rdfs:range ?o .}""")
                     if isinstance(x[0], URIRef)])
@@ -180,3 +180,28 @@ class Schema(object):
                                                                         {?r owl:onClass %s} .}""" % (ty, ty, ty))])
 
         return res
+
+    @staticmethod
+    def add_vocabulary(turtle):
+        vocg = ConjunctiveGraph()
+        vocg.parse(source=StringIO.StringIO(turtle), format='turtle')
+
+        onto = list(vocg.subjects(RDF.type, OWL.Ontology)).pop()
+        onto = [p for (p, u) in vocg.namespaces() if onto in u and p != ''].pop()
+        onto_g = sem_g.get_context(onto)
+        for t in vocg.triples((None, None, None)):
+            onto_g.add(t)
+
+        for (p, u) in vocg.namespaces():
+            onto_g.bind(p, u)
+
+        return URIRef(onto)
+
+    @staticmethod
+    def get_vocabularies():
+        return map(lambda x: str(x.identifier), sem_g.contexts())
+
+    @staticmethod
+    def get_vocabulary(vid):
+        return sem_g.get_context(URIRef(vid)).serialize(format='turtle')
+

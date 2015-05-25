@@ -26,20 +26,81 @@ __author__ = 'Fernando Serena'
 
 from flask import make_response, request, jsonify
 import agora_fountain.index.core as index
-from agora_fountain.vocab.schema import sem_g
+from agora_fountain.vocab.schema import sem_g, Schema
 from agora_fountain.server import app
+from flask_negotiate import consumes, produces
+import json
+from jobs import scheduler
 
-@app.route('/ontology')
-def get_ontology():
+
+class InvalidUsage(Exception):
+    status_code = 400
+
+    def __init__(self, message, status_code=None, payload=None):
+        Exception.__init__(self)
+        self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        self.payload = payload
+
+    def to_dict(self):
+        rv = dict(self.payload or ())
+        rv['message'] = self.message
+        return rv
+
+@app.errorhandler(InvalidUsage)
+def handle_invalid_usage(error):
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    return response
+
+
+def vocab_prefix(uri):
+    return [p for (p, u) in sem_g.namespaces() if u == uri and p != ''].pop()
+
+
+@app.route('/vocabs')
+# @produces('application/json')
+def get_vocabularies():
     """
     Return the currently used ontology
     :return:
     """
-    response = make_response(sem_g.serialize(format='turtle'))
+    vocabs = Schema.get_vocabularies()
+    response = make_response(json.dumps(vocabs))
+    response.headers['Content-Type'] = 'application/json'
+
+    return response
+
+@app.route('/vocabs/<vid>')
+def get_vocabulary(vid):
+    """
+    Return a concrete vocabulary
+    :param vid: The identifier of a vocabulary (prefix)
+    :return:
+    """
+    response = make_response(Schema.get_vocabulary(vid))
     response.headers['Content-Type'] = 'text/turtle'
 
     return response
 
+
+@app.route('/vocabs', methods=['POST'])
+@consumes('text/turtle')
+def add_ontology():
+    """
+    Add a new vocabulary to the fountain
+    :return:
+    """
+    try:
+        uri = Schema.add_vocabulary(request.data)
+    except IndexError:
+        raise InvalidUsage('Ontology URI not found')
+
+    response = make_response()
+    response.status_code = 201
+    response.headers['Location'] = uri
+    return response
 
 @app.route('/prefixes')
 def get_prefixes():
