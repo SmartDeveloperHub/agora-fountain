@@ -36,5 +36,5 @@ setup(
     namespace_packages=['agora_fountain'],
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     include_package_data=True,
-    install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis']
+    install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'APScheduler']
 )
