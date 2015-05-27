@@ -26,5 +26,3 @@ __author__ = 'Fernando Serena'
 
 from agora_fountain.index import core
 from agora_fountain.index import paths
-
-

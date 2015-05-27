@@ -26,10 +26,12 @@ __author__ = 'Fernando Serena'
 
 from flask import make_response, request, jsonify
 import agora_fountain.index.core as index
+from agora_fountain.index.paths import calculate_paths
 from agora_fountain.vocab.schema import sem_g, Schema
 from agora_fountain.server import app
 from flask_negotiate import consumes, produces
 import json
+from datetime import datetime as dt, timedelta as delta
 from jobs import scheduler
 
 
@@ -84,22 +86,63 @@ def get_vocabulary(vid):
 
     return response
 
+def analyse_vocabulary(vid):
+    index.extract_vocabulary(vid)
+    calculate_paths()
 
 @app.route('/vocabs', methods=['POST'])
 @consumes('text/turtle')
-def add_ontology():
+def add_vocabulary():
     """
     Add a new vocabulary to the fountain
     :return:
     """
     try:
-        uri = Schema.add_vocabulary(request.data)
+        vid = Schema.add_vocabulary(request.data)
     except IndexError:
         raise InvalidUsage('Ontology URI not found')
 
+    scheduler.add_job(analyse_vocabulary, args=[vid])
+
     response = make_response()
     response.status_code = 201
-    response.headers['Location'] = uri
+    response.headers['Location'] = vid
+    return response
+
+@app.route('/vocabs/<vid>', methods=['PUT'])
+@consumes('text/turtle')
+def update_vocabulary(vid):
+    """
+    Updates an already contained vocabulary
+    :return:
+    """
+    try:
+        Schema.update_vocabulary(vid, request.data)
+    except IndexError:
+        raise InvalidUsage('Ontology URI not found')
+
+    scheduler.add_job(analyse_vocabulary, args=[vid])
+
+    response = make_response()
+    response.status_code = 200
+    return response
+
+
+@app.route('/vocabs/<vid>', methods=['DELETE'])
+def delete_vocabulary(vid):
+    """
+    Delete an existing vocabulary
+    :return:
+    """
+    try:
+        Schema.delete_vocabulary(vid)
+    except IndexError:
+        raise InvalidUsage('Ontology URI not found')
+
+    scheduler.add_job(analyse_vocabulary, args=[vid])
+
+    response = make_response()
+    response.status_code = 200
     return response
 
 @app.route('/prefixes')

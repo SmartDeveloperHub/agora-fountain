@@ -28,8 +28,8 @@ from agora_fountain.index import core as index
 
 
 def build_property_paths(prop):
-    paths = []
     domain = index.get_property(prop).get('domain')
+    paths = []
     for ty in domain:
         path = [{'type': ty, 'property': prop}]
         refs = index.get_type(ty).get('refs')
@@ -50,7 +50,7 @@ def build_type_paths(ty):
         for r in refs:
             yield build_property_paths(r)
 
-    paths = list([])
+    paths = []
     type_rep = index.get_type(ty)
     ty_refs = type_rep.get('refs')
     for p in build_path(ty_refs):
@@ -64,26 +64,49 @@ def build_type_paths(ty):
     return paths
 
 
-print 'Building paths for properties:'
-properties = index.get_properties()
-for p in properties:
-    print 'Paths for {}:'.format(p)
-    paths = build_property_paths(p)
-    for path in paths:
-        print path
-    if len(paths):
-        for i, path in enumerate(paths):
-            index.r.set('paths:{}:{}'.format(p, i), path)
+def calculate_paths():
+    print 'calculating paths...',
+    elm_paths = list(__calculate_property_paths(index.get_properties()))
+    elm_paths.extend(list(__calculate_type_paths(index.get_types())))
+    print 'Done.'
 
-print 'Building paths for types:'
-types = index.get_types()
-for ty in types:
-    print 'Paths for {}:'.format(ty)
-    paths = build_type_paths(ty)
-    for path in paths:
-        print path
-    if len(paths):
-        for i, path in enumerate(paths):
-            index.r.set('paths:{}:{}'.format(ty, i), path)
+    locks = lock_key_pattern('paths:*')
+    keys = [k for (k, _) in locks]
+    if len(keys):
+        index.r.delete(*keys)
 
-print 'Ready.'
+    with index.r.pipeline() as pipe:
+        pipe.multi()
+        for (elm, paths) in elm_paths:
+            print '{} paths for {}'.format(len(paths), elm)
+            for (i, path) in enumerate(paths):
+                pipe.set('paths:{}:{}'.format(elm, i), path)
+        pipe.execute()
+
+    for _, l in locks:
+        l.release()
+
+    print 'total paths = {}'.format(len(index.r.keys('paths:*')))
+
+
+def lock_key_pattern(pattern):
+    pattern_keys = index.r.keys(pattern)
+    for k in pattern_keys:
+        yield k, index.r.lock(k)
+
+
+def __calculate_property_paths(properties):
+
+    for p in properties:
+        paths = build_property_paths(p)
+        if len(paths):
+            yield p, paths
+
+
+def __calculate_type_paths(types):
+    for ty in types:
+        paths = build_type_paths(ty)
+        if len(paths):
+            yield ty, paths
+
+
