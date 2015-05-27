@@ -27,5 +27,17 @@ __author__ = 'Fernando Serena'
 
 from agora_fountain.server import app
 from agora_fountain import api
+import logging
 
-app.run(host='0.0.0.0', port=app.config['PORT'], debug=False)
+# logging.basicConfig()
+logger = logging.getLogger('apscheduler.scheduler')
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+logger.addHandler(ch)
+logger.setLevel(logging.DEBUG)
+logger = logging.getLogger('apscheduler.executors.default')
+logger.setLevel(logging.DEBUG)
+logger.addHandler(ch)
+
+
+app.run(host='0.0.0.0', port=app.config['PORT'], debug=True)
