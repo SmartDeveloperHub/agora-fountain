@@ -25,7 +25,8 @@
 __author__ = 'Fernando Serena'
 
 from agora_fountain.index import core as index
-
+from agora_fountain.util import ThreadPool
+from datetime import datetime as dt, timedelta as delta
 
 def build_property_paths(prop):
     domain = index.get_property(prop).get('domain')
@@ -66,9 +67,9 @@ def build_type_paths(ty):
 
 def calculate_paths():
     print 'calculating paths...',
-    elm_paths = list(__calculate_property_paths(index.get_properties()))
-    elm_paths.extend(list(__calculate_type_paths(index.get_types())))
-    print 'Done.'
+    start_time = dt.now()
+    elm_paths = list(__calculate_paths(index.get_properties(), index.get_types()))
+    print 'Done (in {}ms)'.format((dt.now() - start_time).total_seconds() * 1000)
 
     locks = lock_key_pattern('paths:*')
     keys = [k for (k, _) in locks]
@@ -94,19 +95,19 @@ def lock_key_pattern(pattern):
     for k in pattern_keys:
         yield k, index.r.lock(k)
 
-
-def __calculate_property_paths(properties):
-
-    for p in properties:
-        paths = build_property_paths(p)
-        if len(paths):
-            yield p, paths
+def build_paths(elm, dest):
+    res = build_property_paths(elm)
+    if len(res):
+        dest.append((elm, res))
 
 
-def __calculate_type_paths(types):
-    for ty in types:
-        paths = build_type_paths(ty)
-        if len(paths):
-            yield ty, paths
+def __calculate_paths(properties, types):
+    tpool = ThreadPool(50)
+    paths = []
+    for p in properties + types:
+        tpool.add_task(build_paths, p, paths)
+    tpool.wait_completion()
+    return paths
+
 
 

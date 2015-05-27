@@ -205,8 +205,12 @@ def get_property(prop):
     domain = reduce(set.union, get_by_pattern('*:properties:{}:domain'.format(prop), r.smembers), set([]))
     rang = reduce(set.union, get_by_pattern('*:properties:{}:range'.format(prop), r.smembers), set([]))
     ty = get_by_pattern('*:properties:{}:type'.format(prop), r.get)
+    try:
+        ty = ty.pop()
+    except IndexError:
+        ty = 'object'
 
-    return {'domain': list(domain), 'range': list(rang), 'type': ty.pop()}
+    return {'domain': list(domain), 'range': list(rang), 'type': ty}
 
 
 def get_type(ty):
