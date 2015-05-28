@@ -54,6 +54,22 @@ namespaces = {}
 prefixes = {}
 
 
+class SchemaException(Exception):
+    def __init__(self, message):
+        Exception.__init__(self)
+        self.message = message
+
+class DuplicateContext(SchemaException):
+    def __init__(self, message):
+        Exception.__init__(self)
+        self.message = message
+
+class UnknownContext(SchemaException):
+    def __init__(self, message):
+        Exception.__init__(self)
+        self.message = message
+
+
 def get_graph():
     g = ConjunctiveGraph(store='Sleepycat')
     g.open('graph_store', create=True)
@@ -224,7 +240,7 @@ class Schema(object):
         vid, uri, owl_g = Schema.__load_owl(owl)
 
         if len(filter(lambda x: str(x.identifier) == vid, sem_g.contexts())):
-            raise Exception('Vocabulary already contained')
+            raise DuplicateContext('Vocabulary already contained')
 
         owl_context = sem_g.get_context(vid)
         for t in owl_g.triples((None, None, None)):
@@ -247,7 +263,7 @@ class Schema(object):
             raise Exception("Identifiers don't match")
 
         if not len(filter(lambda x: str(x.identifier) == vid, sem_g.contexts())):
-            raise Exception('Vocabulary id is not known')
+            raise UnknownContext('Vocabulary id is not known')
 
         context = sem_g.get_context(vid)
         sem_g.remove_context(context)
@@ -261,7 +277,7 @@ class Schema(object):
     @staticmethod
     def delete_vocabulary(vid):
         if not len(filter(lambda x: str(x.identifier) == vid, sem_g.contexts())):
-            raise Exception('Vocabulary id is not known')
+            raise UnknownContext('Vocabulary id is not known')
 
         context = sem_g.get_context(vid)
         sem_g.remove_context(context)
