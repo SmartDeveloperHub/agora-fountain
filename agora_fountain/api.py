@@ -27,14 +27,14 @@ __author__ = 'Fernando Serena'
 from flask import make_response, request, jsonify
 import agora_fountain.index.core as index
 from agora_fountain.index.paths import calculate_paths
-from agora_fountain.vocab.schema import sem_g, Schema
+from agora_fountain.vocab.schema import sem_g, Schema, DuplicateContext, UnknownContext
 from agora_fountain.server import app
 from flask_negotiate import consumes, produces
 import json
 from jobs import scheduler
 
 
-class InvalidUsage(Exception):
+class APIError(Exception):
     status_code = 400
 
     def __init__(self, message, status_code=None, payload=None):
@@ -49,7 +49,17 @@ class InvalidUsage(Exception):
         rv['message'] = self.message
         return rv
 
-@app.errorhandler(InvalidUsage)
+class NotFound(APIError):
+    def __init__(self, message, payload=None):
+        super(NotFound, self).__init__(message, 404, payload)
+
+
+class Conflict(APIError):
+    def __init__(self, message, payload=None):
+        super(Conflict, self).__init__(message, 409, payload)
+
+
+@app.errorhandler(APIError)
 def handle_invalid_usage(error):
     response = jsonify(error.to_dict())
     response.status_code = error.status_code
@@ -99,7 +109,9 @@ def add_vocabulary():
     try:
         vid = Schema.add_vocabulary(request.data)
     except IndexError:
-        raise InvalidUsage('Ontology URI not found')
+        raise APIError('Ontology URI not found')
+    except DuplicateContext, e:
+        raise Conflict(e.message)
 
     scheduler.add_job(analyse_vocabulary, args=[vid])
 
@@ -118,7 +130,11 @@ def update_vocabulary(vid):
     try:
         Schema.update_vocabulary(vid, request.data)
     except IndexError:
-        raise InvalidUsage('Ontology URI not found')
+        raise APIError('Ontology URI not found')
+    except UnknownContext, e:
+        raise NotFound(e.message)
+    except Exception, e:
+        raise APIError(e.message)
 
     scheduler.add_job(analyse_vocabulary, args=[vid])
 
@@ -136,7 +152,9 @@ def delete_vocabulary(vid):
     try:
         Schema.delete_vocabulary(vid)
     except IndexError:
-        raise InvalidUsage('Ontology URI not found')
+        raise APIError('Ontology URI not found')
+    except UnknownContext, e:
+        raise NotFound(e.message)
 
     scheduler.add_job(analyse_vocabulary, args=[vid])
 
