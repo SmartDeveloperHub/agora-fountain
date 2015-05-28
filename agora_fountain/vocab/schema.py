@@ -21,272 +21,199 @@
   limitations under the License.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
-import StringIO
-import time
 
 __author__ = 'Fernando Serena'
-import os
-from rdflib import plugin, ConjunctiveGraph, URIRef, BNode, Graph
-from rdflib.plugins.stores.concurrent import ConcurrentStore
-from rdflib.store import Store
-from rdflib.namespace import FOAF, DC, OWL, RDF, RDFS, XSD
-
-from rdflib import plugin
+from rdflib import ConjunctiveGraph, URIRef, BNode
+from rdflib.namespace import OWL, RDF, RDFS
 
 print 'Loading ontology...',
-# store_id = URIRef('rdflib_sqlite')
-# store = plugin.get("SQLAlchemy", Store)(identifier=store_id)
-# sem_g = ConjunctiveGraph(store, identifier=store_id)
-# sem_g.open(URIRef('sqlite:///db.sqlite'), create=True)
-# sem_g = ConjunctiveGraph(store='Sleepycat')
-# store = plugin.get("Sleepycat", Store)(identifier=store_id)
-# store = plugin.get("IOMemory", Store)()
-# concurrent = plugin.get("Concurrent", Store)(store)
 # sem_g = ConjunctiveGraph('Sleepycat')
-sem_g = ConjunctiveGraph()
-sem_g.store.graph_aware = False
-# sem_g.open('graph_store', create=True)
-print sem_g.serialize(format='turtle')
+_graph = ConjunctiveGraph()
+_graph.store.graph_aware = False
+print _graph.serialize(format='turtle')
 
-print 'Done.'
+print 'Ready.'
 
-namespaces = {}
-prefixes = {}
+_namespaces = {}
+_prefixes = {}
 
-
-class SchemaException(Exception):
-    def __init__(self, message):
-        Exception.__init__(self)
-        self.message = message
-
-class DuplicateContext(SchemaException):
-    def __init__(self, message):
-        Exception.__init__(self)
-        self.message = message
-
-class UnknownContext(SchemaException):
-    def __init__(self, message):
-        Exception.__init__(self)
-        self.message = message
-
-
-def get_graph():
-    g = ConjunctiveGraph(store='Sleepycat')
-    g.open('graph_store', create=True)
-    return g
 
 def qname(uri):
-    q = uri.n3(sem_g.namespace_manager)
+    q = uri.n3(_graph.namespace_manager)
     return q
 
-def extend_prefixed(pu):
+def _extend_prefixed(pu):
     parts = pu.split(':')
     if len(parts) == 1:
         parts = ('', parts[0])
     try:
-        return URIRef(prefixes[parts[0]] + parts[1])
+        return URIRef(_prefixes[parts[0]] + parts[1])
     except KeyError:
         return BNode(pu)
 
 
-class Schema(object):
-    def __init__(self):
-        self.__graph = sem_g
+def graph():
+    return _graph
 
-    @staticmethod
-    def get_prefixes(self):
-        return list(self.__graph.namespaces())
+def prefixes(vid=None):
+    context = _graph
+    if vid is not None:
+        context = context.get_context(vid)
+    return list(context.namespaces())
 
-    def get_types(self, vid=None):
-        context = self.__graph
-        if vid is not None:
-            context = context.get_context(vid)
-        res = set([])
-        res.update([qname(x) for x in context.subjects(RDF.type, OWL.Class) if isinstance(x, URIRef)])
-        res.update([qname(x[0]) for x in
-                    context.query("""SELECT ?o WHERE {?p a owl:ObjectProperty. ?p rdfs:range ?o .}""")
-                    if isinstance(x[0], URIRef)])
-        res.update([qname(x) for x in context.objects(predicate=RDFS.domain) if isinstance(x, URIRef)])
-        res.update([qname(x[0]) for x in context.query("""SELECT DISTINCT ?c WHERE {{?r owl:allValuesFrom ?c}
-                                                        UNION {?a owl:someValuesFrom ?c}
-                                                        UNION {?b owl:onClass ?c}}""")])
+def contexts():
+    return [str(x.identifier) for x in _graph.contexts()]
 
-        return res
+def update_context(vid, g):
+    context = _graph.get_context(vid)
+    _graph.remove_context(context)
+    add_context(vid, g)
 
-    def get_properties(self, vid=None):
-        context = self.__graph
-        if vid is not None:
-            context = context.get_context(vid)
-        res = set([])
-        res.update([qname(c or d) for (c, d) in
-                    context.query("SELECT ?c ?d WHERE { {?c a owl:ObjectProperty} UNION {?d a owl:DatatypeProperty} }")])
-        res.update([qname(p[0]) for p in context.query("SELECT ?p WHERE { ?r a owl:Restriction. ?r owl:onProperty ?p }")])
+def remove_context(vid):
+    context = _graph.get_context(vid)
+    _graph.remove_context(context)
 
-        return res
+def get_context(vid):
+    return _graph.get_context(vid)
 
-    def get_property_domain(self, prop, vid=None):
-        context = self.__graph
-        if vid is not None:
-            context = context.get_context(vid)
-        res = map(lambda x: qname(x), context.objects(extend_prefixed(prop), RDFS.domain))
-        dom = set([])
-        for t in res:
-            dom.update(self.get_subtypes(t, vid))
-            dom.add(t)
-        dom.update([qname(c[0])
-                    for c in context.query("""SELECT ?c WHERE { ?c rdfs:subClassOf [ owl:onProperty %s ]}""" % prop)])
-        return dom
+def add_context(vid, g):
+    vid_context = _graph.get_context(vid)
+    for t in g.triples((None, None, None)):
+        vid_context.add(t)
 
-    def is_object_property(self, prop, vid=None):
-        context = self.__graph
-        if vid is not None:
-            context = context.get_context(vid)
-        type_res = context.query("""ASK {%s a owl:ObjectProperty}""" % prop)
-        is_object = [_ for _ in type_res].pop()
+    for (p, u) in g.namespaces():
+        if p != '':
+            vid_context.bind(p, u)
 
-        if not is_object:
-            is_object = [_ for _ in
-                         context.query("""ASK {?r owl:onProperty %s.
-                                        {?r owl:someValuesFrom ?o} UNION
-                                        {?r owl:allValuesFrom ?a} UNION
-                                        {?r owl:onClass ?c} .}""" % prop)].pop()
+    _namespaces.update([(uri, prefix) for (prefix, uri) in _graph.namespaces()])
+    _prefixes.update([(prefix, uri) for (prefix, uri) in _graph.namespaces()])
 
-        return is_object
+def get_types(vid=None):
+    context = _graph
+    if vid is not None:
+        context = context.get_context(vid)
+    res = set([])
+    res.update([qname(x) for x in context.subjects(RDF.type, OWL.Class) if isinstance(x, URIRef)])
+    res.update([qname(x[0]) for x in
+                context.query("""SELECT ?o WHERE {?p a owl:ObjectProperty. ?p rdfs:range ?o .}""")
+                if isinstance(x[0], URIRef)])
+    res.update([qname(x) for x in context.objects(predicate=RDFS.domain) if isinstance(x, URIRef)])
+    res.update([qname(x[0]) for x in context.query("""SELECT DISTINCT ?c WHERE {{?r owl:allValuesFrom ?c}
+                                                    UNION {?a owl:someValuesFrom ?c}
+                                                    UNION {?b owl:onClass ?c}}""")])
 
-    def get_property_range(self, prop, vid=None):
-        context = self.__graph
-        if vid is not None:
-            context = context.get_context(vid)
-        sub_ts = set([])
-        res = [t for t in context.objects(subject=extend_prefixed(prop), predicate=RDFS.range)
-               if isinstance(t, URIRef)]
+    return res
 
-        if self.is_object_property(prop, vid):
-            for y in res:
-                sub_ts.update([qname(z) for z in context.transitive_subjects(RDFS.subClassOf, y)
-                               if isinstance(z, URIRef)])
-                sub_ts.add(qname(y))
-            sub_ts.update([qname(r[0]) for r in
-                           context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:allValuesFrom ?d.}""" % prop)])
-            sub_ts.update([qname(r[0]) for r in
-                           context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:someValuesFrom ?d.}""" % prop)])
-            sub_ts.update([qname(r[0]) for r in
-                           context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:onClass ?d.}""" % prop)])
-        else:
-            sub_ts.update([qname(r) for r in res])
-            sub_ts.update([qname(r[0]) for r in
-                           context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:onDataRange ?d}""" % prop)])
-        return sub_ts
+def get_properties(vid=None):
+    context = _graph
+    if vid is not None:
+        context = context.get_context(vid)
+    res = set([])
+    res.update([qname(c or d) for (c, d) in
+                context.query("SELECT ?c ?d WHERE { {?c a owl:ObjectProperty} UNION {?d a owl:DatatypeProperty} }")])
+    res.update([qname(p[0]) for p in context.query("SELECT ?p WHERE { ?r a owl:Restriction. ?r owl:onProperty ?p }")])
 
-    def get_supertypes(self, ty, vid=None):
-        context = self.__graph
-        if vid is not None:
-            context = context.get_context(vid)
-        res = map(lambda x: qname(x), filter(lambda y: isinstance(y, URIRef),
-                  context.transitive_objects(extend_prefixed(ty), RDFS.subClassOf)))
-        return filter(lambda x: str(x) != ty, res)
+    return res
 
-    def get_subtypes(self, ty, vid=None):
-        context = self.__graph
-        if vid is not None:
-            context = context.get_context(vid)
-        res = map(lambda x: qname(x), filter(lambda y: isinstance(y, URIRef),
-                  context.transitive_subjects(RDFS.subClassOf, extend_prefixed(ty))))
+def get_property_domain(prop, vid=None):
+    context = _graph
+    if vid is not None:
+        context = context.get_context(vid)
+    res = map(lambda x: qname(x), context.objects(_extend_prefixed(prop), RDFS.domain))
+    dom = set([])
+    for t in res:
+        dom.update(get_subtypes(t, vid))
+        dom.add(t)
+    dom.update([qname(c[0])
+                for c in context.query("""SELECT ?c WHERE { ?c rdfs:subClassOf [ owl:onProperty %s ]}""" % prop)])
+    return dom
 
-        return filter(lambda x: str(x) != ty, res)
+def is_object_property(prop, vid=None):
+    context = _graph
+    if vid is not None:
+        context = context.get_context(vid)
+    type_res = context.query("""ASK {%s a owl:ObjectProperty}""" % prop)
+    is_object = [_ for _ in type_res].pop()
 
-    def get_type_properties(self, ty, vid=None):
-        context = self.__graph
-        if vid is not None:
-            context = context.get_context(vid)
-        res = set([])
-        res.update(map(lambda x: qname(x), context.subjects(RDFS.domain, extend_prefixed(ty))))
-        for sc in self.get_supertypes(ty, vid):
-            res.update(map(lambda x: qname(x), context.subjects(RDFS.domain, extend_prefixed(sc))))
+    if not is_object:
+        is_object = [_ for _ in
+                     context.query("""ASK {?r owl:onProperty %s.
+                                    {?r owl:someValuesFrom ?o} UNION
+                                    {?r owl:allValuesFrom ?a} UNION
+                                    {?r owl:onClass ?c} .}""" % prop)].pop()
 
-        res.update([qname(p[0]) for p in context.query("""SELECT ?p WHERE {%s rdfs:subClassOf [ owl:onProperty ?p ]}""" % ty)
-                    if isinstance(p[0], URIRef)])
+    return is_object
 
-        return res
+def get_property_range(prop, vid=None):
+    context = _graph
+    if vid is not None:
+        context = context.get_context(vid)
+    sub_ts = set([])
+    res = [t for t in context.objects(subject=_extend_prefixed(prop), predicate=RDFS.range)
+           if isinstance(t, URIRef)]
 
-    def get_type_references(self, ty, vid=None):
-        context = self.__graph
-        if vid is not None:
-            context = context.get_context(vid)
-        query = """SELECT ?p WHERE { ?p rdfs:range %s }"""
-        res = set([])
-        res.update(map(lambda x: qname(x[0]), context.query(query % ty)))
-        for sc in self.get_supertypes(ty, vid):
-            res.update(map(lambda x: qname(x[0]), context.query(query % sc)))
+    if is_object_property(prop, vid):
+        for y in res:
+            sub_ts.update([qname(z) for z in context.transitive_subjects(RDFS.subClassOf, y)
+                           if isinstance(z, URIRef)])
+            sub_ts.add(qname(y))
+        sub_ts.update([qname(r[0]) for r in
+                       context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:allValuesFrom ?d.}""" % prop)])
+        sub_ts.update([qname(r[0]) for r in
+                       context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:someValuesFrom ?d.}""" % prop)])
+        sub_ts.update([qname(r[0]) for r in
+                       context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:onClass ?d.}""" % prop)])
+    else:
+        sub_ts.update([qname(r) for r in res])
+        sub_ts.update([qname(r[0]) for r in
+                       context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:onDataRange ?d}""" % prop)])
+    return sub_ts
 
-        res.update([qname(x[0]) for x in context.query("""SELECT ?p WHERE {?r owl:onProperty ?p.
-                                                                        {?r owl:someValuesFrom %s} UNION
-                                                                        {?r owl:allValuesFrom %s} UNION
-                                                                        {?r owl:onClass %s} .}""" % (ty, ty, ty))])
+def get_supertypes(ty, vid=None):
+    context = _graph
+    if vid is not None:
+        context = context.get_context(vid)
+    res = map(lambda x: qname(x), filter(lambda y: isinstance(y, URIRef),
+              context.transitive_objects(_extend_prefixed(ty), RDFS.subClassOf)))
+    return filter(lambda x: str(x) != ty, res)
 
-        return res
+def get_subtypes(ty, vid=None):
+    context = _graph
+    if vid is not None:
+        context = context.get_context(vid)
+    res = map(lambda x: qname(x), filter(lambda y: isinstance(y, URIRef),
+              context.transitive_subjects(RDFS.subClassOf, _extend_prefixed(ty))))
 
-    @staticmethod
-    def __load_owl(owl):
-        owl_g = Graph()
-        owl_g.parse(source=StringIO.StringIO(owl), format='turtle')
+    return filter(lambda x: str(x) != ty, res)
 
-        uri = list(owl_g.subjects(RDF.type, OWL.Ontology)).pop()
-        vid = [p for (p, u) in owl_g.namespaces() if uri in u and p != ''].pop()
-        return vid, uri, owl_g
+def get_type_properties(ty, vid=None):
+    context = _graph
+    if vid is not None:
+        context = context.get_context(vid)
+    res = set([])
+    res.update(map(lambda x: qname(x), context.subjects(RDFS.domain, _extend_prefixed(ty))))
+    for sc in get_supertypes(ty, vid):
+        res.update(map(lambda x: qname(x), context.subjects(RDFS.domain, _extend_prefixed(sc))))
 
-    @staticmethod
-    def add_vocabulary(owl):
-        vid, uri, owl_g = Schema.__load_owl(owl)
+    res.update([qname(p[0]) for p in context.query("""SELECT ?p WHERE {%s rdfs:subClassOf [ owl:onProperty ?p ]}""" % ty)
+                if isinstance(p[0], URIRef)])
 
-        if len(filter(lambda x: str(x.identifier) == vid, sem_g.contexts())):
-            raise DuplicateContext('Vocabulary already contained')
+    return res
 
-        owl_context = sem_g.get_context(vid)
-        for t in owl_g.triples((None, None, None)):
-            owl_context.add(t)
+def get_type_references(ty, vid=None):
+    context = _graph
+    if vid is not None:
+        context = context.get_context(vid)
+    query = """SELECT ?p WHERE { ?p rdfs:range %s }"""
+    res = set([])
+    res.update(map(lambda x: qname(x[0]), context.query(query % ty)))
+    for sc in get_supertypes(ty, vid):
+        res.update(map(lambda x: qname(x[0]), context.query(query % sc)))
 
-        for (p, u) in owl_g.namespaces():
-            if p != '':
-                owl_context.bind(p, u)
+    res.update([qname(x[0]) for x in context.query("""SELECT ?p WHERE {?r owl:onProperty ?p.
+                                                                    {?r owl:someValuesFrom %s} UNION
+                                                                    {?r owl:allValuesFrom %s} UNION
+                                                                    {?r owl:onClass %s} .}""" % (ty, ty, ty))])
+    return res
 
-        namespaces.update([(uri, prefix) for (prefix, uri) in sem_g.namespaces()])
-        prefixes.update([(prefix, uri) for (prefix, uri) in sem_g.namespaces()])
-
-        return vid
-
-    @staticmethod
-    def update_vocabulary(vid, owl):
-        owl_vid, uri, owl_g = Schema.__load_owl(owl)
-
-        if vid != owl_vid:
-            raise Exception("Identifiers don't match")
-
-        if not len(filter(lambda x: str(x.identifier) == vid, sem_g.contexts())):
-            raise UnknownContext('Vocabulary id is not known')
-
-        context = sem_g.get_context(vid)
-        sem_g.remove_context(context)
-        for t in owl_g.triples((None, None, None)):
-            context.add(t)
-
-        for (p, u) in owl_g.namespaces():
-            if p != '':
-                context.bind(p, u)
-
-    @staticmethod
-    def delete_vocabulary(vid):
-        if not len(filter(lambda x: str(x.identifier) == vid, sem_g.contexts())):
-            raise UnknownContext('Vocabulary id is not known')
-
-        context = sem_g.get_context(vid)
-        sem_g.remove_context(context)
-
-    @staticmethod
-    def get_vocabularies():
-        return map(lambda x: str(x.identifier), sem_g.contexts())
-
-    @staticmethod
-    def get_vocabulary(vid):
-        return sem_g.get_context(URIRef(vid)).serialize(format='turtle')
 

@@ -25,11 +25,12 @@
 __author__ = 'Fernando Serena'
 
 from flask import make_response, request, jsonify
+from agora_fountain.vocab.schema import prefixes
 import agora_fountain.index.core as index
 from agora_fountain.index.paths import calculate_paths
-from agora_fountain.vocab.schema import sem_g, Schema, DuplicateContext, UnknownContext
+import agora_fountain.vocab.onto as vocs
 from agora_fountain.server import app
-from flask_negotiate import consumes, produces
+from flask_negotiate import consumes
 import json
 from jobs import scheduler
 
@@ -66,18 +67,13 @@ def handle_invalid_usage(error):
     return response
 
 
-def vocab_prefix(uri):
-    return [p for (p, u) in sem_g.namespaces() if u == uri and p != ''].pop()
-
-
 @app.route('/vocabs')
-# @produces('application/json')
 def get_vocabularies():
     """
     Return the currently used ontology
     :return:
     """
-    vocabs = Schema.get_vocabularies()
+    vocabs = vocs.get_vocabularies()
     response = make_response(json.dumps(vocabs))
     response.headers['Content-Type'] = 'application/json'
 
@@ -90,7 +86,7 @@ def get_vocabulary(vid):
     :param vid: The identifier of a vocabulary (prefix)
     :return:
     """
-    response = make_response(Schema.get_vocabulary(vid))
+    response = make_response(vocs.get_vocabulary(vid))
     response.headers['Content-Type'] = 'text/turtle'
 
     return response
@@ -107,10 +103,10 @@ def add_vocabulary():
     :return:
     """
     try:
-        vid = Schema.add_vocabulary(request.data)
+        vid = vocs.add_vocabulary(request.data)
     except IndexError:
         raise APIError('Ontology URI not found')
-    except DuplicateContext, e:
+    except vocs.DuplicateVocabulary, e:
         raise Conflict(e.message)
 
     scheduler.add_job(analyse_vocabulary, args=[vid])
@@ -128,10 +124,10 @@ def update_vocabulary(vid):
     :return:
     """
     try:
-        Schema.update_vocabulary(vid, request.data)
+        vocs.update_vocabulary(vid, request.data)
     except IndexError:
         raise APIError('Ontology URI not found')
-    except UnknownContext, e:
+    except vocs.UnknownVocabulary, e:
         raise NotFound(e.message)
     except Exception, e:
         raise APIError(e.message)
@@ -150,10 +146,10 @@ def delete_vocabulary(vid):
     :return:
     """
     try:
-        Schema.delete_vocabulary(vid)
+        vocs.delete_vocabulary(vid)
     except IndexError:
         raise APIError('Ontology URI not found')
-    except UnknownContext, e:
+    except vocs.UnknownVocabulary, e:
         raise NotFound(e.message)
 
     scheduler.add_job(analyse_vocabulary, args=[vid])
@@ -168,7 +164,7 @@ def get_prefixes():
     Return the prefixes dictionary of the ontology
     :return:
     """
-    return jsonify(dict(sem_g.namespaces()))
+    return jsonify(prefixes())
 
 @app.route('/types')
 def get_types():

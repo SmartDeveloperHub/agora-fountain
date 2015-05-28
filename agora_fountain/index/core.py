@@ -25,7 +25,8 @@
 __author__ = 'Fernando Serena'
 
 import redis
-from agora_fountain.vocab.schema import Schema
+import agora_fountain.vocab.schema as sch
+import agora_fountain.vocab.onto as vocs
 import base64
 from datetime import datetime as dt
 import time
@@ -33,7 +34,6 @@ from concurrent.futures.thread import ThreadPoolExecutor
 
 pool = redis.ConnectionPool(host='localhost', port=6379, db=0)
 r = redis.StrictRedis(connection_pool=pool)
-sch = Schema()
 r.flushall()
 tpool = ThreadPoolExecutor(1)
 
@@ -123,10 +123,9 @@ def extract_property(p, vid):
 
 
 def extract_types(vid):
-    sch = Schema()
     types = sch.get_types(vid)
 
-    other_vocabs = filter(lambda x: x != vid, sch.get_vocabularies())
+    other_vocabs = filter(lambda x: x != vid, vocs.get_vocabularies())
     dependent_types = set([])
     dependent_props = set([])
     for ovid in other_vocabs:
@@ -150,10 +149,9 @@ def extract_types(vid):
     return types, futures
 
 def extract_properties(vid):
-    sch = Schema()
     properties = sch.get_properties(vid)
 
-    other_vocabs = filter(lambda x: x != vid, sch.get_vocabularies())
+    other_vocabs = filter(lambda x: x != vid, vocs.get_vocabularies())
     dependent_types = set([])
     for ovid in other_vocabs:
         o_types = [t for t in get_types(ovid)]
