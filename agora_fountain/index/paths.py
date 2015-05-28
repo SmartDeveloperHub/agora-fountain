@@ -25,8 +25,8 @@
 __author__ = 'Fernando Serena'
 
 from agora_fountain.index import core as index
-from agora_fountain.util import ThreadPool
-from datetime import datetime as dt, timedelta as delta
+from concurrent.futures.thread import ThreadPoolExecutor
+from datetime import datetime as dt
 
 def build_property_paths(prop):
     domain = index.get_property(prop).get('domain')
@@ -66,7 +66,7 @@ def build_type_paths(ty):
 
 
 def calculate_paths():
-    print 'calculating paths...',
+    print 'Calculating paths...',
     start_time = dt.now()
     elm_paths = list(__calculate_paths(index.get_properties(), index.get_types()))
     print 'Done (in {}ms)'.format((dt.now() - start_time).total_seconds() * 1000)
@@ -95,18 +95,29 @@ def lock_key_pattern(pattern):
     for k in pattern_keys:
         yield k, index.r.lock(k)
 
-def build_paths(elm, dest):
-    res = build_property_paths(elm)
-    if len(res):
-        dest.append((elm, res))
+def __calculate_type_paths(elm):
+    return elm, build_type_paths(elm)
+
+def __calculate_property_paths(elm):
+    return elm, build_property_paths(elm)
 
 
 def __calculate_paths(properties, types):
-    tpool = ThreadPool(50)
     paths = []
-    for p in properties + types:
-        tpool.add_task(build_paths, p, paths)
-    tpool.wait_completion()
+    futures = []
+    with ThreadPoolExecutor(50) as pool:
+        for p in properties:
+            futures.append(pool.submit(__calculate_property_paths, p))
+        for t in types:
+            futures.append(pool.submit(__calculate_type_paths, t))
+        while len(futures):
+            for f in futures:
+                if f.done():
+                    elm, res = f.result()
+                    if len(res):
+                        paths.append((elm, res))
+                    futures.remove(f)
+        pool.shutdown()
     return paths
 
 

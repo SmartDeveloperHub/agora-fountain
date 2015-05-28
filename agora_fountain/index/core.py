@@ -27,14 +27,15 @@ __author__ = 'Fernando Serena'
 import redis
 from agora_fountain.vocab.schema import Schema
 import base64
-from agora_fountain.util import ThreadPool
-from datetime import datetime
-
+from datetime import datetime as dt
+import time
+from concurrent.futures.thread import ThreadPoolExecutor
 
 pool = redis.ConnectionPool(host='localhost', port=6379, db=0)
 r = redis.StrictRedis(connection_pool=pool)
-
+sch = Schema()
 r.flushall()
+tpool = ThreadPoolExecutor(1)
 
 def get_by_pattern(pattern, func):
     def get_all():
@@ -68,64 +69,60 @@ def delete_vocabulary(vid):
 
 
 def extract_vocabulary(vid):
+    print 'Extracting vocabulary {}...'.format(vid)
     delete_vocabulary(vid)
-    tpool = ThreadPool(1)
-    pre = datetime.now()
-    types = extract_types(vid, tpool)
-    properties = extract_properties(vid, tpool)
-    tpool.wait_completion()
-    print datetime.now() - pre
+    start_time = dt.now()
+    types, t_futures = extract_types(vid)
+    properties, p_futures = extract_properties(vid)
+    for f in t_futures + p_futures:
+        f.result()
+    print 'Done (in {}ms)'.format((dt.now() - start_time).total_seconds() * 1000)
     return types, properties
 
+
 def extract_type(t, vid):
-    print 'type {}'.format(t)
-    sch = Schema()
+    # print 'type {}'.format(t),
+
+    start_time = dt.now()
     with r.pipeline() as pipe:
         pipe.multi()
-        # pipe.sadd('types', t)
         pipe.sadd('vocabs:{}:types'.format(vid), t)
-        t_supertypes = sch.get_supertypes(t)
-        for s in t_supertypes:
+        for s in sch.get_supertypes(t):
             pipe.sadd('vocabs:{}:types:{}:super'.format(vid, t), s)
-            # print '\tsupertype {}'.format(s)
-        t_subtypes = sch.get_subtypes(t)
-        for s in t_subtypes:
+        for s in sch.get_subtypes(t):
             pipe.sadd('vocabs:{}:types:{}:sub'.format(vid, t), s)
-            # print '\tsubtype {}'.format(s)
-        t_properties = sch.get_type_properties(t)
-        for s in t_properties:
+        for s in sch.get_type_properties(t):
             pipe.sadd('vocabs:{}:types:{}:props'.format(vid, t), s)
-            # print '\tproperty {}'.format(s)
-        t_incomes = sch.get_type_references(t)
-        for s in t_incomes:
+        for s in sch.get_type_references(t):
             pipe.sadd('vocabs:{}:types:{}:refs'.format(vid, t), s)
-            # print '\tref {}'.format(s)
         pipe.execute()
 
+    # print '... in {}s'.format((dt.now() - start_time).total_seconds())
+
+
 def extract_property(p, vid):
-    print 'property {}'.format(p)
-    sch = Schema()
+    def p_type():
+        if sch.is_object_property(p):
+            return 'object'
+        else:
+            return 'data'
+
+    # print 'property {}'.format(p),
+    start_time = dt.now()
     with r.pipeline() as pipe:
         pipe.multi()
         pipe.sadd('vocabs:{}:properties'.format(vid), p)
         pipe.hset('vocabs:{}:properties:{}'.format(vid, p), 'uri', p)
-        p_domain = list(sch.get_property_domain(p))
-        for dc in p_domain:
-            # print '\tdomain {}'.format(dc)
+        for dc in list(sch.get_property_domain(p)):
             pipe.sadd('vocabs:{}:properties:{}:domain'.format(vid, p), dc)
-
-        p_range = list(sch.get_property_range(p))
-        for dc in p_range:
-            # print '\trange {}'.format(dc)
+        for dc in list(sch.get_property_range(p)):
             pipe.sadd('vocabs:{}:properties:{}:range'.format(vid, p), dc)
-        type_value = 'data'
-        if sch.is_object_property(p):
-            type_value = 'object'
-        # print '\ttype {}'.format(type_value)
-        pipe.set('vocabs:{}:properties:{}:type'.format(vid, p), type_value)
+        pipe.set('vocabs:{}:properties:{}:type'.format(vid, p), p_type())
         pipe.execute()
+    # print '... in {}s'.format((dt.now() - start_time).total_seconds())
 
-def extract_types(vid, tpool):
+
+def extract_types(vid):
     sch = Schema()
     types = sch.get_types(vid)
 
@@ -145,13 +142,14 @@ def extract_types(vid, tpool):
                 dependent_props.add((ovid, op))
 
     types = set.union(set([(vid, t) for t in types]), dependent_types)
+    futures = []
     for v, t in types:
-        tpool.add_task(extract_type, t, v)
+        futures.append(tpool.submit(extract_type, t, v))
     for v, p in dependent_props:
-        tpool.add_task(extract_property, p, v)
-    return types
+        futures.append(tpool.submit(extract_property, p, v))
+    return types, futures
 
-def extract_properties(vid, tpool):
+def extract_properties(vid):
     sch = Schema()
     properties = sch.get_properties(vid)
 
@@ -164,13 +162,12 @@ def extract_properties(vid, tpool):
             if set.intersection(properties, otype.get('refs')) or set.intersection(properties, otype.get('properties')):
                 dependent_types.add((ovid, oty))
 
+    futures = []
     for p in properties:
-        tpool.add_task(extract_property, p, vid)
-
+        futures.append(tpool.submit(extract_property, p, vid))
     for v, ty in dependent_types:
-        tpool.add_task(extract_type, ty, v)
-
-    return properties
+        futures.append(tpool.submit(extract_type, ty, v))
+    return properties, futures
 
 
 def __get_vocab_set(pattern, vid=None):

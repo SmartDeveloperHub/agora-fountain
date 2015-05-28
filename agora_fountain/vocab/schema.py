@@ -22,12 +22,16 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 import StringIO
+import time
 
 __author__ = 'Fernando Serena'
 import os
 from rdflib import plugin, ConjunctiveGraph, URIRef, BNode, Graph
+from rdflib.plugins.stores.concurrent import ConcurrentStore
 from rdflib.store import Store
 from rdflib.namespace import FOAF, DC, OWL, RDF, RDFS, XSD
+
+from rdflib import plugin
 
 print 'Loading ontology...',
 # store_id = URIRef('rdflib_sqlite')
@@ -35,6 +39,10 @@ print 'Loading ontology...',
 # sem_g = ConjunctiveGraph(store, identifier=store_id)
 # sem_g.open(URIRef('sqlite:///db.sqlite'), create=True)
 # sem_g = ConjunctiveGraph(store='Sleepycat')
+# store = plugin.get("Sleepycat", Store)(identifier=store_id)
+# store = plugin.get("IOMemory", Store)()
+# concurrent = plugin.get("Concurrent", Store)(store)
+# sem_g = ConjunctiveGraph('Sleepycat')
 sem_g = ConjunctiveGraph()
 sem_g.store.graph_aware = False
 # sem_g.open('graph_store', create=True)
