@@ -4,3 +4,4 @@ graph_store/
 *.pyc
 *.egg-info
 *.owl
+*.xml
