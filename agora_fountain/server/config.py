@@ -25,16 +25,13 @@
 __author__ = 'Fernando Serena'
 
 import os
+import logging
 
 PORT = 5002
-STORE = '/tmp'
-ONTOLOGY = {
-    "file": '%(here)s/harvester/semantics.owl' % {"here": os.getcwd()},
-    "graph": "http://sdh/ontology#skeleton"
+STORE_PATHS = {
+    'graph': 'graph_store'
 }
-TRIPLESTORE = {
-    'sparql': 'http://localhost:8890/sparql',
-    'resource_graph': 'http://sdh/r_graph#'
-}
+LOG = logging.DEBUG
+
 
 

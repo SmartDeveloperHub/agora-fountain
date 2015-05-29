@@ -24,7 +24,6 @@
 
 __author__ = 'Fernando Serena'
 
-# this is a namespace package
 import pkg_resources
 try:
     pkg_resources.declare_namespace(__name__)

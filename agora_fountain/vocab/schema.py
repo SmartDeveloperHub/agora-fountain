@@ -23,16 +23,19 @@
 """
 
 __author__ = 'Fernando Serena'
+import logging
 from rdflib import ConjunctiveGraph, URIRef, BNode
 from rdflib.namespace import OWL, RDF, RDFS
 
-print 'Loading ontology...',
-# sem_g = ConjunctiveGraph('Sleepycat')
-_graph = ConjunctiveGraph()
-_graph.store.graph_aware = False
-print _graph.serialize(format='turtle')
+log = logging.getLogger('agora_fountain.schema')
 
-print 'Ready.'
+log.info('Loading ontology...'),
+_graph = ConjunctiveGraph('Sleepycat')
+# _graph = ConjunctiveGraph()
+_graph.store.graph_aware = False
+_graph.open('graph_store', create=True)
+log.debug('\n{}'.format(_graph.serialize(format='turtle')))
+log.info('Ready')
 
 _namespaces = {}
 _prefixes = {}

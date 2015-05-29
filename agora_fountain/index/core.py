@@ -31,6 +31,9 @@ import base64
 from datetime import datetime as dt
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
+import logging
+
+log = logging.getLogger('agora_fountain.index')
 
 pool = redis.ConnectionPool(host='localhost', port=6379, db=0)
 r = redis.StrictRedis(connection_pool=pool)
@@ -69,14 +72,14 @@ def delete_vocabulary(vid):
 
 
 def extract_vocabulary(vid):
-    print 'Extracting vocabulary {}...'.format(vid)
+    log.info('Extracting vocabulary {}...'.format(vid))
     delete_vocabulary(vid)
     start_time = dt.now()
     types, t_futures = extract_types(vid)
     properties, p_futures = extract_properties(vid)
     for f in t_futures + p_futures:
         f.result()
-    print 'Done (in {}ms)'.format((dt.now() - start_time).total_seconds() * 1000)
+    log.info('Done (in {}ms)'.format((dt.now() - start_time).total_seconds() * 1000))
     return types, properties
 
 

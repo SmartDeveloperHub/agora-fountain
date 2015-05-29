@@ -24,9 +24,12 @@
 
 __author__ = 'Fernando Serena'
 
+import logging
 from agora_fountain.index import core as index
 from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime as dt
+
+log = logging.getLogger('agora_fountain.paths')
 
 def build_property_paths(prop):
     domain = index.get_property(prop).get('domain')
@@ -66,10 +69,9 @@ def build_type_paths(ty):
 
 
 def calculate_paths():
-    print 'Calculating paths...',
+    log.info('Calculating paths...')
     start_time = dt.now()
     elm_paths = list(__calculate_paths(index.get_properties(), index.get_types()))
-    print 'Done (in {}ms)'.format((dt.now() - start_time).total_seconds() * 1000)
 
     locks = lock_key_pattern('paths:*')
     keys = [k for (k, _) in locks]
@@ -79,7 +81,7 @@ def calculate_paths():
     with index.r.pipeline() as pipe:
         pipe.multi()
         for (elm, paths) in elm_paths:
-            print '{} paths for {}'.format(len(paths), elm)
+            log.debug('{} paths for {}'.format(len(paths), elm))
             for (i, path) in enumerate(paths):
                 pipe.set('paths:{}:{}'.format(elm, i), path)
         pipe.execute()
@@ -87,7 +89,8 @@ def calculate_paths():
     for _, l in locks:
         l.release()
 
-    print 'total paths = {}'.format(len(index.r.keys('paths:*')))
+    log.info('Found {} paths in {}ms'.format(len(index.r.keys('paths:*')),
+                                             (dt.now() - start_time).total_seconds() * 1000))
 
 
 def lock_key_pattern(pattern):
