@@ -30,10 +30,10 @@ from rdflib.namespace import OWL, RDF, RDFS
 log = logging.getLogger('agora_fountain.schema')
 
 log.info('Loading ontology...'),
-_graph = ConjunctiveGraph('Sleepycat')
-# _graph = ConjunctiveGraph()
+# _graph = ConjunctiveGraph('Sleepycat')
+_graph = ConjunctiveGraph()
 _graph.store.graph_aware = False
-_graph.open('graph_store', create=True)
+# _graph.open('graph_store', create=True)
 log.debug('\n{}'.format(_graph.serialize(format='turtle')))
 log.info('Ready')
 
@@ -171,6 +171,18 @@ def get_property_range(prop, vid=None):
         sub_ts.update([qname(r[0]) for r in
                        context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:onDataRange ?d}""" % prop)])
     return sub_ts
+
+def get_property_inverses(prop, vid=None):
+    context = _graph
+    if vid is not None:
+        context = context.get_context(vid)
+    inverses = set([])
+    inverses.update([qname(p) for p in context.objects(subject=_extend_prefixed(prop), predicate=OWL.inverseOf)
+                    if isinstance(p, URIRef)])
+    inverses.update([qname(p) for p in context.subjects(object=_extend_prefixed(prop), predicate=OWL.inverseOf)
+                    if isinstance(p, URIRef)])
+
+    return inverses
 
 def get_supertypes(ty, vid=None):
     context = _graph

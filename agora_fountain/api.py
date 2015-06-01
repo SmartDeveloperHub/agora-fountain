@@ -251,14 +251,24 @@ def get_path(elm):
         paths.append(eval(path))
 
     for path in paths:
+        steps = [s for s in reversed(path)]
+        any_seed = False
+        sub_path = None
         for i, step in enumerate(path):
-            type_seeds = index.get_type_seeds(step.get('type'))
+            ty = step.get('type')
+            type_seeds = index.get_type_seeds(ty)
             if len(type_seeds):
-                sub_path = path[:i+1]
-                sub_path = {'seeds': type_seeds, 'steps': [s for s in reversed(sub_path)]}
+                any_seed = True
+                sub_path = {'seeds': type_seeds, 'steps': [s for s in reversed(path[:i+1])]}
                 if not (sub_path in seed_paths):
                     seed_paths.append(sub_path)
-                    # break
+            if i == len(path) - 1 and not len(type_seeds):
+                cycle = step.get('cycle', 0)
+                if any_seed and cycle:
+                    cycle_path = sub_path.copy()
+                    cycle_path['steps'] = sub_path['steps'][:]
+                    cycle_path['steps'].extend(steps[-cycle-1:])
+                    seed_paths.append(cycle_path)
 
     # It only returns seeds if elm is a type and there are seeds of it
     req_type_seeds = index.get_type_seeds(elm)

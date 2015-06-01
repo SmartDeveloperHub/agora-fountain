@@ -120,6 +120,8 @@ def extract_property(p, vid):
             pipe.sadd('vocabs:{}:properties:{}:domain'.format(vid, p), dc)
         for dc in list(sch.get_property_range(p)):
             pipe.sadd('vocabs:{}:properties:{}:range'.format(vid, p), dc)
+        for dc in list(sch.get_property_inverses(p)):
+            pipe.sadd('vocabs:{}:properties:{}:inverse'.format(vid, p), dc)
         pipe.set('vocabs:{}:properties:{}:type'.format(vid, p), p_type())
         pipe.execute()
     # print '... in {}s'.format((dt.now() - start_time).total_seconds())
@@ -200,15 +202,29 @@ def get_type_seeds(ty):
 
 
 def get_property(prop):
+    def get_inverse_domain(ip):
+        return reduce(set.union, get_by_pattern('*:properties:{}:domain'.format(ip), r.smembers), set([]))
+
+    def get_inverse_range(ip):
+        return reduce(set.union, get_by_pattern('*:properties:{}:range'.format(ip), r.smembers), set([]))
+
     domain = reduce(set.union, get_by_pattern('*:properties:{}:domain'.format(prop), r.smembers), set([]))
     rang = reduce(set.union, get_by_pattern('*:properties:{}:range'.format(prop), r.smembers), set([]))
+    inv = reduce(set.union, get_by_pattern('*:properties:{}:inverse'.format(prop), r.smembers), set([]))
+
+    if len(inv):
+        inverse_dr = [(get_inverse_domain(i), get_inverse_range(i)) for i in inv]
+        for dom, ra in inverse_dr:
+            domain.update(ra)
+            rang.update(dom)
+
     ty = get_by_pattern('*:properties:{}:type'.format(prop), r.get)
     try:
         ty = ty.pop()
     except IndexError:
         ty = 'object'
 
-    return {'domain': list(domain), 'range': list(rang), 'type': ty}
+    return {'domain': list(domain), 'range': list(rang), 'inverse': list(inv), 'type': ty}
 
 
 def get_type(ty):

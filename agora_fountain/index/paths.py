@@ -31,21 +31,35 @@ from datetime import datetime as dt
 
 log = logging.getLogger('agora_fountain.paths')
 
-def build_property_paths(prop):
+def build_property_paths(prop, steps=None, last_cycle=None):
+    if steps is None:
+        steps = []
     domain = index.get_property(prop).get('domain')
     paths = []
     for ty in domain:
-        path = [{'type': ty, 'property': prop}]
+        step = {'type': ty, 'property': prop}
+        path = [step]
+        if step == last_cycle:
+            log.warning('cycle detected on {}'.format(step))
+            continue
+        if step in steps and last_cycle is None:
+            last_cycle = step.copy()
+            steps[-1]['cycle'] = len(steps) - steps.index(step) - 1
+            cycle_path = steps[:]
+            cycle_path[-1]['end'] = True
+            paths.append(cycle_path)
         refs = index.get_type(ty).get('refs')
+        refs = filter(lambda x: prop not in index.get_property(x).get('inverse'), refs)
         if not len(refs):
             paths.append(path)
-        for r in refs:
-            sub_paths = build_property_paths(r)
-            for sp in sub_paths:
-                new_path = path[:]
-                new_path.extend(sp)
-                paths.append(new_path)
-
+        else:
+            for r in refs:
+                sub_paths = build_property_paths(r, steps + path, last_cycle=last_cycle)
+                for sp in sub_paths:
+                    if not sp[-1].get('end', False):
+                        paths.append(path + sp)
+                    else:
+                        paths.append(sp)
     return paths
 
 
@@ -83,6 +97,10 @@ def calculate_paths():
         for (elm, paths) in elm_paths:
             log.debug('{} paths for {}'.format(len(paths), elm))
             for (i, path) in enumerate(paths):
+                try:
+                    del path[-1]['end']
+                except KeyError:
+                    pass
                 pipe.set('paths:{}:{}'.format(elm, i), path)
         pipe.execute()
 
