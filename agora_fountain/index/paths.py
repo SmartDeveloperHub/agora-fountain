@@ -28,8 +28,12 @@ import logging
 from agora_fountain.index import core as index
 from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime as dt
+import networkx as nx
+import itertools
 
 log = logging.getLogger('agora_fountain.paths')
+
+pgraph = nx.DiGraph()
 
 def build_property_paths(prop, steps=None, last_cycle=None):
     if steps is None:
@@ -41,6 +45,7 @@ def build_property_paths(prop, steps=None, last_cycle=None):
         path = [step]
         if step == last_cycle:
             log.warning('cycle detected on {}'.format(step))
+            last_cycle = None
             continue
         if step in steps and last_cycle is None:
             last_cycle = step.copy()
@@ -81,20 +86,88 @@ def build_type_paths(ty):
 
     return paths
 
+def build_directed_graph():
+    pgraph.clear()
+    pgraph.add_nodes_from(index.get_types(), ty='type')
+    for node in index.get_properties():
+        p_dict = index.get_property(node)
+        dom = p_dict.get('domain')
+        ran = p_dict.get('range')
+        edges = [(node, d) for d in dom]
+        edges.extend([(r, node) for r in ran])
+        # edges = list(itertools.product(*[dom, ran]))
+        pgraph.add_edges_from(edges)
+    pgraph.add_nodes_from(index.get_properties(), ty='prop')
+    for node in index.get_types():
+        p_dict = index.get_type(node)
+        refs = p_dict.get('refs')
+        props = p_dict.get('properties')
+        # edges = list(itertools.product(*[refs, props]))
+        edges = [(node, r) for r in refs]
+        edges.extend([(p, node) for p in props])
+
+        pgraph.add_edges_from(edges)
+
+    print 'graph', list(pgraph.edges())
+
+
+def build_paths(node, tree, pred=False):
+    paths = []
+
+    props = tree.successors(node)
+    for p in props:
+        next_types = tree.successors(p)
+        for t in next_types:
+            step = {'property': p, 'type': t}
+            path = [step]
+            sub_paths = build_paths(t, tree)
+            if not len(sub_paths):
+                paths.append(path)
+            for sp in sub_paths:
+                paths.append(path + sp)
+
+    # if pred:
+    #     pred = pgraph.predecessors(node)
+    #     for tpr in pred:
+    #         for path in paths:
+    #             path.insert(0, {'property': node, 'type': tpr})
+
+    return paths
+
 
 def calculate_paths():
     log.info('Calculating paths...')
     start_time = dt.now()
-    elm_paths = list(__calculate_paths(index.get_properties(), index.get_types()))
+
+    build_directed_graph()
+
+    # print list(nx.simple_cycles(pgraph))
 
     locks = lock_key_pattern('paths:*')
     keys = [k for (k, _) in locks]
     if len(keys):
         index.r.delete(*keys)
 
+    node_paths = []
+    for node, data in pgraph.nodes(data=True):
+        ty = data.get('ty')
+        node_tree = nx.bfs_tree(pgraph, node)
+        print 'bfs tree for {}'.format(node), list(node_tree.edges())
+        paths = []
+        if ty == 'type':
+            paths.extend(build_paths(node, node_tree))
+            # Add subclasses
+        # else:
+        #     succ = pgraph.successors(node)
+        #     for s in succ:
+        #         paths.extend(build_paths(s, node_tree, pred=True))
+
+        if len(paths):
+            node_paths.append((node, paths))
+
     with index.r.pipeline() as pipe:
         pipe.multi()
-        for (elm, paths) in elm_paths:
+        for (elm, paths) in node_paths:
             log.debug('{} paths for {}'.format(len(paths), elm))
             for (i, path) in enumerate(paths):
                 try:
@@ -109,6 +182,32 @@ def calculate_paths():
 
     log.info('Found {} paths in {}ms'.format(len(index.r.keys('paths:*')),
                                              (dt.now() - start_time).total_seconds() * 1000))
+
+    # start_time = dt.now()
+    # elm_paths = list(__calculate_paths(index.get_properties(), index.get_types()))
+    #
+    # locks = lock_key_pattern('paths:*')
+    # keys = [k for (k, _) in locks]
+    # if len(keys):
+    #     index.r.delete(*keys)
+    #
+    # with index.r.pipeline() as pipe:
+    #     pipe.multi()
+    #     for (elm, paths) in elm_paths:
+    #         log.debug('{} paths for {}'.format(len(paths), elm))
+    #         for (i, path) in enumerate(paths):
+    #             try:
+    #                 del path[-1]['end']
+    #             except KeyError:
+    #                 pass
+    #             pipe.set('paths:{}:{}'.format(elm, i), path)
+    #     pipe.execute()
+    #
+    # for _, l in locks:
+    #     l.release()
+    #
+    # log.info('Found {} paths in {}ms'.format(len(index.r.keys('paths:*')),
+    #                                          (dt.now() - start_time).total_seconds() * 1000))
 
 
 def lock_key_pattern(pattern):
@@ -126,7 +225,7 @@ def __calculate_property_paths(elm):
 def __calculate_paths(properties, types):
     paths = []
     futures = []
-    with ThreadPoolExecutor(50) as pool:
+    with ThreadPoolExecutor(1) as pool:
         for p in properties:
             futures.append(pool.submit(__calculate_property_paths, p))
         for t in types:
