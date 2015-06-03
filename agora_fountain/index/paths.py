@@ -30,118 +30,87 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime as dt
 import networkx as nx
 import itertools
+import matplotlib.pyplot as plt
 
 log = logging.getLogger('agora_fountain.paths')
 
 pgraph = nx.DiGraph()
-
-def build_property_paths(prop, steps=None, last_cycle=None):
-    if steps is None:
-        steps = []
-    domain = index.get_property(prop).get('domain')
-    paths = []
-    for ty in domain:
-        step = {'type': ty, 'property': prop}
-        path = [step]
-        if step == last_cycle:
-            log.warning('cycle detected on {}'.format(step))
-            last_cycle = None
-            continue
-        if step in steps and last_cycle is None:
-            last_cycle = step.copy()
-            steps[-1]['cycle'] = len(steps) - steps.index(step) - 1
-            cycle_path = steps[:]
-            cycle_path[-1]['end'] = True
-            paths.append(cycle_path)
-        refs = index.get_type(ty).get('refs')
-        refs = filter(lambda x: prop not in index.get_property(x).get('inverse'), refs)
-        if not len(refs):
-            paths.append(path)
-        else:
-            for r in refs:
-                sub_paths = build_property_paths(r, steps + path, last_cycle=last_cycle)
-                for sp in sub_paths:
-                    if not sp[-1].get('end', False):
-                        paths.append(path + sp)
-                    else:
-                        paths.append(sp)
-    return paths
-
-
-def build_type_paths(ty):
-    def build_path(refs):
-        for r in refs:
-            yield build_property_paths(r)
-
-    paths = []
-    type_rep = index.get_type(ty)
-    ty_refs = type_rep.get('refs')
-    for p in build_path(ty_refs):
-        paths.extend(p)
-
-    for sub in type_rep.get('sub'):
-        refs = index.get_type(sub).get('refs')
-        for p in build_path(refs):
-            paths.extend(p)
-
-    return paths
+rgraph = nx.DiGraph()
 
 def build_directed_graph():
     pgraph.clear()
+    rgraph.clear()
+
     pgraph.add_nodes_from(index.get_types(), ty='type')
+    rgraph.add_nodes_from(index.get_types())
     for node in index.get_properties():
         p_dict = index.get_property(node)
         dom = p_dict.get('domain')
         ran = p_dict.get('range')
-        edges = [(node, d) for d in dom]
-        edges.extend([(r, node) for r in ran])
-        # edges = list(itertools.product(*[dom, ran]))
+        edges = [(d, node) for d in dom]
+        edges.extend([(node, r) for r in ran])
         pgraph.add_edges_from(edges)
+        edges = list(itertools.product(*[dom, ran]))
+        rgraph.add_edges_from(edges, label=node)
     pgraph.add_nodes_from(index.get_properties(), ty='prop')
     for node in index.get_types():
         p_dict = index.get_type(node)
         refs = p_dict.get('refs')
         props = p_dict.get('properties')
         # edges = list(itertools.product(*[refs, props]))
-        edges = [(node, r) for r in refs]
-        edges.extend([(p, node) for p in props])
+        edges = [(r, node) for r in refs]
+        edges.extend([(node, p) for p in props])
 
         pgraph.add_edges_from(edges)
 
+    # nx.draw_graphviz(rgraph)
+    # nx.write_dot(rgraph, 'file.dot')
     print 'graph', list(pgraph.edges())
 
 
-def build_paths(node, tree, pred=False):
+def build_paths(node, root, steps=None):
     paths = []
-
-    props = tree.successors(node)
-    for p in props:
-        next_types = tree.successors(p)
-        for t in next_types:
-            step = {'property': p, 'type': t}
-            path = [step]
-            sub_paths = build_paths(t, tree)
-            if not len(sub_paths):
-                paths.append(path)
+    if steps is None:
+        steps = []
+    for t in [x for x in pgraph.predecessors(node) if x != root]:
+        step = {'property': node, 'type': t}
+        if step in steps:
+            continue
+        path = [step]
+        new_steps = steps[:]
+        new_steps.append(step)
+        for p in pgraph.predecessors(t):
+            sub_paths = build_paths(p, root, new_steps[:])
             for sp in sub_paths:
                 paths.append(path + sp)
-
-    # if pred:
-    #     pred = pgraph.predecessors(node)
-    #     for tpr in pred:
-    #         for path in paths:
-    #             path.insert(0, {'property': node, 'type': tpr})
+        if not len(paths):
+            paths.append(path)
 
     return paths
 
 
 def calculate_paths():
+    def __calculate_node_paths(n, d):
+        ty = d.get('ty')
+        _paths = []
+        if ty == 'type':
+            for p in pgraph.predecessors(n):
+                _paths.extend(build_paths(p, n))
+            type_dict = index.get_type(n)
+            for st in type_dict.get('sub'):
+                for p in pgraph.predecessors(st):
+                    _paths.extend(build_paths(p, st))
+        else:
+            _paths.extend(build_paths(n, n))
+        log.debug('{} paths for {}'.format(len(_paths), n))
+        return n, _paths
+
     log.info('Calculating paths...')
     start_time = dt.now()
 
     build_directed_graph()
 
-    # print list(nx.simple_cycles(pgraph))
+    print list(nx.simple_cycles(pgraph))
 
     locks = lock_key_pattern('paths:*')
     keys = [k for (k, _) in locks]
@@ -149,31 +118,24 @@ def calculate_paths():
         index.r.delete(*keys)
 
     node_paths = []
-    for node, data in pgraph.nodes(data=True):
-        ty = data.get('ty')
-        node_tree = nx.bfs_tree(pgraph, node)
-        print 'bfs tree for {}'.format(node), list(node_tree.edges())
-        paths = []
-        if ty == 'type':
-            paths.extend(build_paths(node, node_tree))
-            # Add subclasses
-        # else:
-        #     succ = pgraph.successors(node)
-        #     for s in succ:
-        #         paths.extend(build_paths(s, node_tree, pred=True))
-
-        if len(paths):
-            node_paths.append((node, paths))
+    futures = []
+    with ThreadPoolExecutor(1) as th_pool:
+        for node, data in pgraph.nodes(data=True):
+            futures.append(th_pool.submit(__calculate_node_paths, node, data))
+        while len(futures):
+            for f in futures:
+                if f.done():
+                    elm, res = f.result()
+                    if len(res):
+                        node_paths.append((elm, res))
+                    futures.remove(f)
+        th_pool.shutdown()
 
     with index.r.pipeline() as pipe:
         pipe.multi()
         for (elm, paths) in node_paths:
-            log.debug('{} paths for {}'.format(len(paths), elm))
+            # log.debug('{} paths for {}'.format(len(paths), elm))
             for (i, path) in enumerate(paths):
-                try:
-                    del path[-1]['end']
-                except KeyError:
-                    pass
                 pipe.set('paths:{}:{}'.format(elm, i), path)
         pipe.execute()
 
@@ -183,62 +145,10 @@ def calculate_paths():
     log.info('Found {} paths in {}ms'.format(len(index.r.keys('paths:*')),
                                              (dt.now() - start_time).total_seconds() * 1000))
 
-    # start_time = dt.now()
-    # elm_paths = list(__calculate_paths(index.get_properties(), index.get_types()))
-    #
-    # locks = lock_key_pattern('paths:*')
-    # keys = [k for (k, _) in locks]
-    # if len(keys):
-    #     index.r.delete(*keys)
-    #
-    # with index.r.pipeline() as pipe:
-    #     pipe.multi()
-    #     for (elm, paths) in elm_paths:
-    #         log.debug('{} paths for {}'.format(len(paths), elm))
-    #         for (i, path) in enumerate(paths):
-    #             try:
-    #                 del path[-1]['end']
-    #             except KeyError:
-    #                 pass
-    #             pipe.set('paths:{}:{}'.format(elm, i), path)
-    #     pipe.execute()
-    #
-    # for _, l in locks:
-    #     l.release()
-    #
-    # log.info('Found {} paths in {}ms'.format(len(index.r.keys('paths:*')),
-    #                                          (dt.now() - start_time).total_seconds() * 1000))
-
 
 def lock_key_pattern(pattern):
     pattern_keys = index.r.keys(pattern)
     for k in pattern_keys:
         yield k, index.r.lock(k)
-
-def __calculate_type_paths(elm):
-    return elm, build_type_paths(elm)
-
-def __calculate_property_paths(elm):
-    return elm, build_property_paths(elm)
-
-
-def __calculate_paths(properties, types):
-    paths = []
-    futures = []
-    with ThreadPoolExecutor(1) as pool:
-        for p in properties:
-            futures.append(pool.submit(__calculate_property_paths, p))
-        for t in types:
-            futures.append(pool.submit(__calculate_type_paths, t))
-        while len(futures):
-            for f in futures:
-                if f.done():
-                    elm, res = f.result()
-                    if len(res):
-                        paths.append((elm, res))
-                    futures.remove(f)
-        pool.shutdown()
-    return paths
-
 
 
