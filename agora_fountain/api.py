@@ -24,16 +24,16 @@
 
 __author__ = 'Fernando Serena'
 
-from flask import make_response, request, jsonify
+from flask import make_response, request, jsonify, render_template
 from agora_fountain.vocab.schema import prefixes
 import agora_fountain.index.core as index
-from agora_fountain.index.paths import calculate_paths
+from agora_fountain.index.paths import calculate_paths, rgraph
 import agora_fountain.vocab.onto as vocs
 from agora_fountain.server import app
 from flask_negotiate import consumes
 import json
 from jobs import scheduler
-
+import networkx as nx
 
 class APIError(Exception):
     status_code = 400
@@ -276,3 +276,26 @@ def get_path(elm):
         seed_paths.append({'seeds': req_type_seeds, 'steps': []})
 
     return jsonify({'paths': list(seed_paths)})
+
+
+@app.route('/graph/')
+def show_graph():
+
+    nodes = [{'data': {'id': nid.replace(':', '-')}} for i, nid in enumerate(rgraph.nodes())]
+    edges = [{'data': {'id': data.get('label'), 'source': source.replace(':', '-'),
+                       'target': target.replace(':', '-')}}
+             for source, target, data in rgraph.edges(data=True)]
+    sorted_nodes = [(nid.replace(':', '-'), rgraph.in_degree(nid)) for nid in rgraph.nodes()]
+    sorted_nodes = sorted(sorted_nodes, key=lambda (nid, d): d)
+
+    roots = [n for n, d in sorted_nodes if not d]
+    if not len(roots):
+        try:
+            roots = sorted_nodes[0]
+        except IndexError:
+            pass
+
+    return render_template('graph.html',
+                           nodes=json.dumps(nodes),
+                           edges=json.dumps(edges), roots=json.dumps(roots))
+

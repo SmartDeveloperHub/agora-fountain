@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <link href={{ url_for('static', filename='style.css') }} rel="stylesheet" />
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src={{ url_for('static', filename='dagre.min.js') }}></script>
+    <script src={{ url_for('static', filename='arbor.js') }}></script>
+    <script src="http://cytoscape.github.io/cytoscape.js/api/cytoscape.js-latest/cytoscape.min.js"></script>
+    <script>
+        var vGraph = {
+            nodes: {{ nodes | safe }},
+            edges: {{ edges | safe }},
+            roots: {{ roots | safe }}
+        };
+        console.log(vGraph)
+    </script>
+    <script src={{ url_for('static', filename='graph.js') }}></script>
+</head>
+<body style="background-color: #012">
+<div id="cy"></div>
+</body>
+</html>
