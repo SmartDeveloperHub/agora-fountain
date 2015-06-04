@@ -281,11 +281,15 @@ def get_path(elm):
 @app.route('/graph/')
 def show_graph():
 
-    nodes = [{'data': {'id': nid.replace(':', '-')}} for i, nid in enumerate(rgraph.nodes())]
-    edges = [{'data': {'id': data.get('label'), 'source': source.replace(':', '-'),
-                       'target': target.replace(':', '-')}}
-             for source, target, data in rgraph.edges(data=True)]
-    sorted_nodes = [(nid.replace(':', '-'), rgraph.in_degree(nid)) for nid in rgraph.nodes()]
+    nodes_dict = {}
+    for i, nid in enumerate(rgraph.nodes()):
+        nodes_dict[nid] = 'n{}'.format(i)
+
+    nodes = [{'data': {'id': nodes_dict[nid], 'label': nid}} for nid in nodes_dict]
+    edges = [{'data': {'id': 'e{}'.format(i), 'source': nodes_dict[source], 'target': nodes_dict[target],
+                       'label': data.get('label')}}
+             for i, (source, target, data) in enumerate(rgraph.edges(data=True))]
+    sorted_nodes = [(nodes_dict[nid], rgraph.in_degree(nid)) for nid in rgraph.nodes()]
     sorted_nodes = sorted(sorted_nodes, key=lambda (nid, d): d)
 
     roots = [n for n, d in sorted_nodes if not d]

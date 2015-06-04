@@ -12,7 +12,7 @@ $(function () { // on dom ready
         style: cytoscape.stylesheet()
             .selector('node')
             .css({
-                'content': 'data(id)',
+                'content': 'data(label)',
                 'color': '#d0d0d0'
             })
             .selector('edge')
@@ -21,7 +21,7 @@ $(function () { // on dom ready
                 'width': 4,
                 'line-color': '#555',
                 'target-arrow-color': '#aaa',
-                'content': 'data(id)',
+                'content': 'data(label)',
                 'color': '#f0f0f0'
             })
             .selector('.highlighted')
@@ -34,7 +34,10 @@ $(function () { // on dom ready
                 'color': 'white'
             }),
 
-        elements: vGraph
+        elements: {
+            nodes: vGraph.nodes,
+            edges: vGraph.edges
+        }
     });
 
     var options = {
@@ -52,12 +55,12 @@ $(function () { // on dom ready
         stop: undefined, // callback on layoutstop
 
         // forces used by arbor (use arbor default on undefined)
-        repulsion: 2000,
-        stiffness: 900,
-        friction: undefined,
+        repulsion: 1000,
+        stiffness: 0.5,
+        friction: 0.8,
         gravity: true,
         fps: undefined,
-        precision: undefined,
+        precision: 0.8,
 
         // static numbers or functions that dynamically return what these
         // values should be for each element
@@ -79,13 +82,15 @@ $(function () { // on dom ready
     };
 
     cy.layout(options);
+
     cy.bfs = [];
 
-    vGraph.roots.forEach(function(r, index) {
+    vGraph.roots.forEach(function (r, index) {
         cy.bfs.push(
             {
                 index: 0,
-                bfs: cy.elements().bfs('#' + vGraph.roots[0], function () { }, true)
+                bfs: cy.elements().bfs('#' + vGraph.roots[0], function () {
+                }, true)
             }
         );
     });
@@ -95,14 +100,14 @@ $(function () { // on dom ready
 
         if (b.index < b.bfs.path.length) {
             b.index++;
-            setTimeout(function() {
+            setTimeout(function () {
                 highlightNextEle(b);
             }, 1000);
         }
     };
 
     // kick off first highlights
-    cy.bfs.forEach(function(b) {
+    cy.bfs.forEach(function (b) {
         highlightNextEle(b);
     });
 

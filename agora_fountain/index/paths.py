@@ -30,7 +30,6 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime as dt
 import networkx as nx
 import itertools
-import matplotlib.pyplot as plt
 
 log = logging.getLogger('agora_fountain.paths')
 
@@ -63,8 +62,6 @@ def build_directed_graph():
 
         pgraph.add_edges_from(edges)
 
-    # nx.draw_graphviz(rgraph)
-    # nx.write_dot(rgraph, 'file.dot')
     print 'graph', list(pgraph.edges())
 
 
@@ -110,40 +107,40 @@ def calculate_paths():
 
     build_directed_graph()
 
-    print list(nx.simple_cycles(pgraph))
-
-    locks = lock_key_pattern('paths:*')
-    keys = [k for (k, _) in locks]
-    if len(keys):
-        index.r.delete(*keys)
-
-    node_paths = []
-    futures = []
-    with ThreadPoolExecutor(1) as th_pool:
-        for node, data in pgraph.nodes(data=True):
-            futures.append(th_pool.submit(__calculate_node_paths, node, data))
-        while len(futures):
-            for f in futures:
-                if f.done():
-                    elm, res = f.result()
-                    if len(res):
-                        node_paths.append((elm, res))
-                    futures.remove(f)
-        th_pool.shutdown()
-
-    with index.r.pipeline() as pipe:
-        pipe.multi()
-        for (elm, paths) in node_paths:
-            # log.debug('{} paths for {}'.format(len(paths), elm))
-            for (i, path) in enumerate(paths):
-                pipe.set('paths:{}:{}'.format(elm, i), path)
-        pipe.execute()
-
-    for _, l in locks:
-        l.release()
-
-    log.info('Found {} paths in {}ms'.format(len(index.r.keys('paths:*')),
-                                             (dt.now() - start_time).total_seconds() * 1000))
+    # print list(nx.simple_cycles(pgraph))
+    #
+    # locks = lock_key_pattern('paths:*')
+    # keys = [k for (k, _) in locks]
+    # if len(keys):
+    #     index.r.delete(*keys)
+    #
+    # node_paths = []
+    # futures = []
+    # with ThreadPoolExecutor(1) as th_pool:
+    #     for node, data in pgraph.nodes(data=True):
+    #         futures.append(th_pool.submit(__calculate_node_paths, node, data))
+    #     while len(futures):
+    #         for f in futures:
+    #             if f.done():
+    #                 elm, res = f.result()
+    #                 if len(res):
+    #                     node_paths.append((elm, res))
+    #                 futures.remove(f)
+    #     th_pool.shutdown()
+    #
+    # with index.r.pipeline() as pipe:
+    #     pipe.multi()
+    #     for (elm, paths) in node_paths:
+    #         # log.debug('{} paths for {}'.format(len(paths), elm))
+    #         for (i, path) in enumerate(paths):
+    #             pipe.set('paths:{}:{}'.format(elm, i), path)
+    #     pipe.execute()
+    #
+    # for _, l in locks:
+    #     l.release()
+    #
+    # log.info('Found {} paths in {}ms'.format(len(index.r.keys('paths:*')),
+    #                                          (dt.now() - start_time).total_seconds() * 1000))
 
 
 def lock_key_pattern(pattern):
