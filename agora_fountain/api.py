@@ -35,6 +35,7 @@ import json
 from jobs import scheduler
 import networkx as nx
 import itertools
+import base64
 
 class APIError(Exception):
     status_code = 400
@@ -297,43 +298,52 @@ def show_graph():
     nodes_dict = {}
 
     types = []
-    obj_props = []
-    data_props = []
-
-    for i, (nid, data) in enumerate(pgraph.nodes(data=True)):
-        nodes_dict[nid] = 'n{}'.format(i)
-        if data.get('ty') == 'type':
-            types.append(nid)
-        elif data.get('ty') == 'prop' and data.get('object'):
-            obj_props.append(nid)
-        else:
-            data_props.append((nid, data.get('range')))
-
     nodes = []
     edges = []
+
+    ibase = 0
+    nodes_dict = dict([(nid, base64.b16encode(nid)) for nid in pgraph.nodes()])
+    for (nid, data) in pgraph.nodes(data=True):
+        if data.get('ty') == 'type':
+            types.append(nid)
+            nodes.append({'data': {'id': nodes_dict[nid], 'label': nid, 'shape': 'roundrectangle',
+                          'width': len(nid) * 10}})
+            ibase += 1
+        elif data.get('ty') == 'prop' and data.get('object'):
+            dom = [t for (t, _) in pgraph.in_edges(nid)]
+            ran = [t for (_, t) in pgraph.out_edges(nid)]
+            dom = [d for d in dom if not set.intersection(set(index.get_type(d).get('super')), set(dom))]
+            ran = [r for r in ran if not set.intersection(set(index.get_type(r).get('super')), set(ran))]
+
+            op_edges = list(itertools.product(*[dom, ran]))
+            edges.extend([{'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid,
+                                    'target': nodes_dict[tg]}} for i, (s, tg) in enumerate(op_edges)])
+            ibase += len(op_edges) + 1
+        else:
+            ran = data.get('range')
+            if len(ran):
+                dom = [t for (t, _) in pgraph.in_edges(nid)]
+                dom = [d for d in dom if not set.intersection(set(index.get_type(d).get('super')), set(dom))]
+                dp_edges = list(itertools.product(*[dom, ran]))
+
+                for i, (s, t) in enumerate(dp_edges):
+                    rid = 'n{}'.format(len(nodes_dict) + len(nodes))
+                    nodes.append({'data': {'id': rid, 'label': t, 'width': len(t) * 10, 'shape': 'ellipse'}})
+                    edges.append({'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid,
+                                           'target': rid}})
+                ibase += len(dp_edges) + 1
+
     for t in types:
-        nodes.append({'data': {'id': nodes_dict[t], 'label': t, 'shape': 'roundrectangle',
-                      'width': len(t) * 10}})
-    ibase = len(nodes_dict) + 1
-    for op in obj_props:
-        dom = [t for (t, _) in pgraph.in_edges(op)]
-        ran = [t for (_, t) in pgraph.out_edges(op)]
-        op_edges = list(itertools.product(*[dom, ran]))
-        edges.extend([{'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': op,
-                                'target': nodes_dict[tg]}} for i, (s, tg) in enumerate(op_edges)])
-        ibase += len(op_edges) + 1
+        supertypes = index.get_type(t).get('super')
+        supertypes = [s for s in supertypes if not set.intersection(set(index.get_type(s).get('sub')),
+                                                                    set(supertypes))]
+        st_edges = [{'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[st], 'label': '',
+                     'target': nodes_dict[t]}, 'classes': 'subclass'}
+                    for i, st in enumerate(supertypes) if st in nodes_dict]
+        if len(st_edges):
+            edges.extend(st_edges)
 
-    for (dp, ran) in data_props:
-        if len(ran):
-            dom = [t for (t, _) in pgraph.in_edges(dp)]
-            dp_edges = list(itertools.product(*[dom, ran]))
-
-            for i, (s, t) in enumerate(dp_edges):
-                rid = 'n{}'.format(len(nodes_dict) + len(nodes))
-                nodes.append({'data': {'id': rid, 'label': t, 'width': len(t) * 10, 'shape': 'ellipse'}})
-                edges.append({'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': dp,
-                                       'target': rid}})
-            ibase += len(dp_edges) + 1
+        ibase += len(st_edges) + 1
 
     sorted_nodes = [(nodes_dict[t], pgraph.in_degree(t)) for t in types]
     sorted_nodes = sorted(sorted_nodes, key=lambda (nid, d): d)

@@ -103,7 +103,7 @@ def get_types(vid=None):
     res.update([qname(x) for x in context.objects(predicate=RDFS.domain) if isinstance(x, URIRef)])
     res.update([qname(x[0]) for x in context.query("""SELECT DISTINCT ?c WHERE {{?r owl:allValuesFrom ?c}
                                                     UNION {?a owl:someValuesFrom ?c}
-                                                    UNION {?b owl:onClass ?c}}""")])
+                                                    UNION {?b owl:onClass ?c}}""") if isinstance(x[0], URIRef)])
 
     return res
 
@@ -127,8 +127,11 @@ def get_property_domain(prop, vid=None):
     for t in res:
         dom.update(get_subtypes(t, vid))
         dom.add(t)
-    dom.update([qname(c[0])
-                for c in context.query("""SELECT ?c WHERE { ?c rdfs:subClassOf [ owl:onProperty %s ]}""" % prop)])
+    res = [qname(c[0])
+                for c in context.query("""SELECT ?c WHERE { ?c rdfs:subClassOf [ owl:onProperty %s ]}""" % prop)]
+    dom.update(res)
+    for t in res:
+        dom.update(get_subtypes(t, vid))
     return dom
 
 def is_object_property(prop, vid=None):
@@ -160,16 +163,31 @@ def get_property_range(prop, vid=None):
             sub_ts.update([qname(z) for z in context.transitive_subjects(RDFS.subClassOf, y)
                            if isinstance(z, URIRef)])
             sub_ts.add(qname(y))
-        sub_ts.update([qname(r[0]) for r in
-                       context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:allValuesFrom ?d.}""" % prop)])
-        sub_ts.update([qname(r[0]) for r in
-                       context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:someValuesFrom ?d.}""" % prop)])
-        sub_ts.update([qname(r[0]) for r in
-                       context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:onClass ?d.}""" % prop)])
+        res = [qname(r[0]) for r in
+                       context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?r owl:allValuesFrom ?r.}""" % prop)
+                       if isinstance(r[0], URIRef)]
+        sub_ts.update(res)
+        for t in res:
+            sub_ts.update(get_subtypes(t, vid))
+
+        res = [qname(r[0]) for r in
+                       context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:someValuesFrom ?r.}""" % prop)
+                       if isinstance(r[0], URIRef)]
+        sub_ts.update(res)
+        for t in res:
+            sub_ts.update(get_subtypes(t, vid))
+
+        res = [qname(r[0]) for r in
+                       context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:onClass ?r.}""" % prop)
+                       if isinstance(r[0], URIRef)]
+        sub_ts.update(res)
+        for t in res:
+            sub_ts.update(get_subtypes(t, vid))
     else:
         sub_ts.update([qname(r) for r in res])
         sub_ts.update([qname(r[0]) for r in
-                       context.query("""SELECT ?d WHERE { ?r owl:onProperty %s. ?r owl:onDataRange ?d}""" % prop)])
+                       context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:onDataRange ?r}""" % prop)
+                       if isinstance(r[0], URIRef)])
     return sub_ts
 
 def get_property_inverses(prop, vid=None):

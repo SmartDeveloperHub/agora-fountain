@@ -39,6 +39,12 @@ $(function () { // on dom ready
                 'transition-property': 'background-color, line-color, target-arrow-color, color',
                 'transition-duration': '0.5s',
                 'color': 'white'
+            }).selector('edge.subclass')
+            .css({
+                'line-style': 'dashed',
+                'source-arrow-shape': 'triangle',
+                'source-arrow-fill': 'hollow',
+                'target-arrow-shape': 'none'
             }),
 
         elements: {
@@ -53,8 +59,8 @@ $(function () { // on dom ready
         animate: true, // whether to show the layout as it's running
         maxSimulationTime: 4000, // max length in ms to run the layout
         fit: false, // on every layout reposition of nodes, fit the viewport
-        padding: 10, // padding around the simulation
-        boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
+        padding: 30, // padding around the simulation
+        boundingBox: {x1: 0, y1: 0, w: 3000, h: 3000}, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
         ungrabifyWhileSimulating: false, // so you can't drag nodes during layout
 
         // callbacks on layout events
@@ -62,12 +68,12 @@ $(function () { // on dom ready
         stop: undefined, // callback on layoutstop
 
         // forces used by arbor (use arbor default on undefined)
-        repulsion: 3000,
-        stiffness: 300,
-        friction: 0.5,
+        repulsion: 2500,
+        stiffness: undefined,
+        friction: 0.9,
         gravity: true,
         fps: undefined,
-        precision: undefined,
+        precision: 0.9,
 
         // static numbers or functions that dynamically return what these
         // values should be for each element
@@ -75,7 +81,7 @@ $(function () { // on dom ready
         nodeMass: undefined,
         edgeLength: undefined,
 
-        stepSize: 0.1, // smoothing of arbor bounding box
+        stepSize: 0.2, // smoothing of arbor bounding box
 
         // function that returns true if the system is stable to indicate
         // that the layout can be stopped

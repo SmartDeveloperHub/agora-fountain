@@ -103,7 +103,7 @@ def calculate_paths():
     build_directed_graph()
 
     print list(nx.simple_cycles(pgraph))
-
+    #
     locks = lock_key_pattern('paths:*')
     keys = [k for (k, _) in locks]
     if len(keys):
