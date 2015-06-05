@@ -13,12 +13,19 @@ $(function () { // on dom ready
             .selector('node')
             .css({
                 'content': 'data(label)',
-                'color': '#d0d0d0'
+                'color': '#d0d0d0',
+                'shape': 'data(shape)',
+                'width': 'mapData(width, 1, 150, 1, 150)',
+                'height': '40',
+                'text-valign': 'center',
+                'text-outline-width': 2,
+                'text-outline-color': '#303030',
+                'background-color': '#303030'
             })
             .selector('edge')
             .css({
                 'target-arrow-shape': 'triangle',
-                'width': 4,
+                'width': 3,
                 'line-color': '#555',
                 'target-arrow-color': '#aaa',
                 'content': 'data(label)',
@@ -55,12 +62,12 @@ $(function () { // on dom ready
         stop: undefined, // callback on layoutstop
 
         // forces used by arbor (use arbor default on undefined)
-        repulsion: 1000,
-        stiffness: 0.5,
-        friction: 0.8,
+        repulsion: 3000,
+        stiffness: 300,
+        friction: 0.5,
         gravity: true,
         fps: undefined,
-        precision: 0.8,
+        precision: undefined,
 
         // static numbers or functions that dynamically return what these
         // values should be for each element

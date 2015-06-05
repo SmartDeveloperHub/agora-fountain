@@ -27,13 +27,14 @@ __author__ = 'Fernando Serena'
 from flask import make_response, request, jsonify, render_template
 from agora_fountain.vocab.schema import prefixes
 import agora_fountain.index.core as index
-from agora_fountain.index.paths import calculate_paths, rgraph
+from agora_fountain.index.paths import calculate_paths, pgraph
 import agora_fountain.vocab.onto as vocs
 from agora_fountain.server import app
 from flask_negotiate import consumes
 import json
 from jobs import scheduler
 import networkx as nx
+import itertools
 
 class APIError(Exception):
     status_code = 400
@@ -281,15 +282,60 @@ def get_path(elm):
 @app.route('/graph/')
 def show_graph():
 
-    nodes_dict = {}
-    for i, nid in enumerate(rgraph.nodes()):
-        nodes_dict[nid] = 'n{}'.format(i)
+    def set_shape(dic):
+        if dic.get('ty') == 'type':
+            return 'roundrectangle'
 
-    nodes = [{'data': {'id': nodes_dict[nid], 'label': nid}} for nid in nodes_dict]
-    edges = [{'data': {'id': 'e{}'.format(i), 'source': nodes_dict[source], 'target': nodes_dict[target],
-                       'label': data.get('label')}}
-             for i, (source, target, data) in enumerate(rgraph.edges(data=True))]
-    sorted_nodes = [(nodes_dict[nid], rgraph.in_degree(nid)) for nid in rgraph.nodes()]
+        return 'ellipse'
+
+    def set_size(dic):
+        size = len(nid) * 10
+        if dic.get('ty') == 'object':
+            size *= 1.5
+        return size
+
+    nodes_dict = {}
+
+    types = []
+    obj_props = []
+    data_props = []
+
+    for i, (nid, data) in enumerate(pgraph.nodes(data=True)):
+        nodes_dict[nid] = 'n{}'.format(i)
+        if data.get('ty') == 'type':
+            types.append(nid)
+        elif data.get('ty') == 'prop' and data.get('object'):
+            obj_props.append(nid)
+        else:
+            data_props.append((nid, data.get('range')))
+
+    nodes = []
+    edges = []
+    for t in types:
+        nodes.append({'data': {'id': nodes_dict[t], 'label': t, 'shape': 'roundrectangle',
+                      'width': len(t) * 10}})
+    ibase = len(nodes_dict) + 1
+    for op in obj_props:
+        dom = [t for (t, _) in pgraph.in_edges(op)]
+        ran = [t for (_, t) in pgraph.out_edges(op)]
+        op_edges = list(itertools.product(*[dom, ran]))
+        edges.extend([{'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': op,
+                                'target': nodes_dict[tg]}} for i, (s, tg) in enumerate(op_edges)])
+        ibase += len(op_edges) + 1
+
+    for (dp, ran) in data_props:
+        if len(ran):
+            dom = [t for (t, _) in pgraph.in_edges(dp)]
+            dp_edges = list(itertools.product(*[dom, ran]))
+
+            for i, (s, t) in enumerate(dp_edges):
+                rid = 'n{}'.format(len(nodes_dict) + len(nodes))
+                nodes.append({'data': {'id': rid, 'label': t, 'width': len(t) * 10, 'shape': 'ellipse'}})
+                edges.append({'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': dp,
+                                       'target': rid}})
+            ibase += len(dp_edges) + 1
+
+    sorted_nodes = [(nodes_dict[t], pgraph.in_degree(t)) for t in types]
     sorted_nodes = sorted(sorted_nodes, key=lambda (nid, d): d)
 
     roots = [n for n, d in sorted_nodes if not d]

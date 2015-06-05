@@ -29,7 +29,6 @@ from agora_fountain.index import core as index
 from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime as dt
 import networkx as nx
-import itertools
 
 log = logging.getLogger('agora_fountain.paths')
 
@@ -41,25 +40,21 @@ def build_directed_graph():
     rgraph.clear()
 
     pgraph.add_nodes_from(index.get_types(), ty='type')
-    rgraph.add_nodes_from(index.get_types())
     for node in index.get_properties():
         p_dict = index.get_property(node)
         dom = p_dict.get('domain')
         ran = p_dict.get('range')
         edges = [(d, node) for d in dom]
-        edges.extend([(node, r) for r in ran])
+        if p_dict.get('type') == 'object':
+            edges.extend([(node, r) for r in ran])
         pgraph.add_edges_from(edges)
-        edges = list(itertools.product(*[dom, ran]))
-        rgraph.add_edges_from(edges, label=node)
-    pgraph.add_nodes_from(index.get_properties(), ty='prop')
+        pgraph.add_node(node, ty='prop', object=p_dict.get('type') == 'object', range=ran)
     for node in index.get_types():
         p_dict = index.get_type(node)
         refs = p_dict.get('refs')
         props = p_dict.get('properties')
-        # edges = list(itertools.product(*[refs, props]))
         edges = [(r, node) for r in refs]
         edges.extend([(node, p) for p in props])
-
         pgraph.add_edges_from(edges)
 
     print 'graph', list(pgraph.edges())
@@ -107,40 +102,40 @@ def calculate_paths():
 
     build_directed_graph()
 
-    # print list(nx.simple_cycles(pgraph))
-    #
-    # locks = lock_key_pattern('paths:*')
-    # keys = [k for (k, _) in locks]
-    # if len(keys):
-    #     index.r.delete(*keys)
-    #
-    # node_paths = []
-    # futures = []
-    # with ThreadPoolExecutor(1) as th_pool:
-    #     for node, data in pgraph.nodes(data=True):
-    #         futures.append(th_pool.submit(__calculate_node_paths, node, data))
-    #     while len(futures):
-    #         for f in futures:
-    #             if f.done():
-    #                 elm, res = f.result()
-    #                 if len(res):
-    #                     node_paths.append((elm, res))
-    #                 futures.remove(f)
-    #     th_pool.shutdown()
-    #
-    # with index.r.pipeline() as pipe:
-    #     pipe.multi()
-    #     for (elm, paths) in node_paths:
-    #         # log.debug('{} paths for {}'.format(len(paths), elm))
-    #         for (i, path) in enumerate(paths):
-    #             pipe.set('paths:{}:{}'.format(elm, i), path)
-    #     pipe.execute()
-    #
-    # for _, l in locks:
-    #     l.release()
-    #
-    # log.info('Found {} paths in {}ms'.format(len(index.r.keys('paths:*')),
-    #                                          (dt.now() - start_time).total_seconds() * 1000))
+    print list(nx.simple_cycles(pgraph))
+
+    locks = lock_key_pattern('paths:*')
+    keys = [k for (k, _) in locks]
+    if len(keys):
+        index.r.delete(*keys)
+
+    node_paths = []
+    futures = []
+    with ThreadPoolExecutor(1) as th_pool:
+        for node, data in pgraph.nodes(data=True):
+            futures.append(th_pool.submit(__calculate_node_paths, node, data))
+        while len(futures):
+            for f in futures:
+                if f.done():
+                    elm, res = f.result()
+                    if len(res):
+                        node_paths.append((elm, res))
+                    futures.remove(f)
+        th_pool.shutdown()
+
+    with index.r.pipeline() as pipe:
+        pipe.multi()
+        for (elm, paths) in node_paths:
+            # log.debug('{} paths for {}'.format(len(paths), elm))
+            for (i, path) in enumerate(paths):
+                pipe.set('paths:{}:{}'.format(elm, i), path)
+        pipe.execute()
+
+    for _, l in locks:
+        l.release()
+
+    log.info('Found {} paths in {}ms'.format(len(index.r.keys('paths:*')),
+                                             (dt.now() - start_time).total_seconds() * 1000))
 
 
 def lock_key_pattern(pattern):
