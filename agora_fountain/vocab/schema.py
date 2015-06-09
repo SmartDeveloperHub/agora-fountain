@@ -164,7 +164,7 @@ def get_property_range(prop, vid=None):
                            if isinstance(z, URIRef)])
             sub_ts.add(qname(y))
         res = [qname(r[0]) for r in
-                       context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?r owl:allValuesFrom ?r.}""" % prop)
+                       context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:allValuesFrom ?r.}""" % prop)
                        if isinstance(r[0], URIRef)]
         sub_ts.update(res)
         for t in res:
