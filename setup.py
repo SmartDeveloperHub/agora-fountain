@@ -26,7 +26,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="Agora-Fountain",
-    version="0.1.0",
+    version="0.2.0",
     author="Fernando Serena",
     author_email="fernando.serena@centeropenmiddleware.com",
     description="The Agora core service for ontology paths discovery and seed management",
