@@ -245,58 +245,35 @@ def get_path(elm):
     :param elm: The required prefixed type/property
     :return:
     """
-    path_keys = index.r.keys('paths:{}:*'.format(elm))
     paths = []
     seed_paths = []
-    for key in path_keys:
-        path = index.r.get(key)
-        paths.append(eval(path))
+    for path, score in index.r.zrange('paths:{}'.format(elm), 0, -1, withscores=True):
+        paths.append((int(score), eval(path)))
 
-    for path in paths:
-        steps = [s for s in reversed(path)]
-        any_seed = False
-        sub_path = None
+    all_cycles = set([])
+
+    for score, path in paths:
         for i, step in enumerate(path):
             ty = step.get('type')
             type_seeds = index.get_type_seeds(ty)
             if len(type_seeds):
-                any_seed = True
-                sub_path = {'seeds': type_seeds, 'steps': [s for s in reversed(path[:i+1])]}
+                cycles = [int(c) for c in index.r.smembers('cycles:{}'.format(elm))]
+                all_cycles = all_cycles.union(set(cycles))
+                sub_path = {'cycles': cycles, 'seeds': type_seeds, 'steps': list(reversed(path[:i+1]))}
                 if not (sub_path in seed_paths):
                     seed_paths.append(sub_path)
-            if i == len(path) - 1 and not len(type_seeds):
-                cycle = step.get('cycle', 0)
-                if any_seed and cycle:
-                    cycle_path = sub_path.copy()
-                    cycle_path['steps'] = sub_path['steps'][:]
-                    cycle_path['steps'].extend(steps[-cycle-1:])
-                    seed_paths.append(cycle_path)
 
     # It only returns seeds if elm is a type and there are seeds of it
     req_type_seeds = index.get_type_seeds(elm)
     if len(req_type_seeds):
         seed_paths.append({'seeds': req_type_seeds, 'steps': []})
 
-    return jsonify({'paths': list(seed_paths)})
+    all_cycles = [{'cycle': int(cid), 'steps': eval(index.r.zrange('cycles', cid, cid).pop())} for cid in all_cycles]
+    return jsonify({'paths': list(seed_paths), 'all-cycles': all_cycles})
 
 
 @app.route('/graph/')
 def show_graph():
-
-    def set_shape(dic):
-        if dic.get('ty') == 'type':
-            return 'roundrectangle'
-
-        return 'ellipse'
-
-    def set_size(dic):
-        size = len(nid) * 10
-        if dic.get('ty') == 'object':
-            size *= 1.5
-        return size
-
-    nodes_dict = {}
-
     types = []
     nodes = []
     edges = []

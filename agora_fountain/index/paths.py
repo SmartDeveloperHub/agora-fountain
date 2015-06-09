@@ -102,8 +102,25 @@ def calculate_paths():
 
     build_directed_graph()
 
-    print list(nx.simple_cycles(pgraph))
-    #
+    index.r.delete('cycles')
+    g_cycles = list(nx.simple_cycles(pgraph))
+    with index.r.pipeline() as pipe:
+        pipe.multi()
+        for i, cy in enumerate(g_cycles):
+            print cy
+            cycle = []
+            t_cycle = None
+            for elm in cy:
+                if index.is_type(elm):
+                    t_cycle = elm
+                elif t_cycle is not None:
+                    cycle.append({'property': elm, 'type': t_cycle})
+                    t_cycle = None
+            if t_cycle is not None:
+                cycle.append({'property': cy[0], 'type': t_cycle})
+            pipe.zadd('cycles', i, cycle)
+        pipe.execute()
+
     locks = lock_key_pattern('paths:*')
     keys = [k for (k, _) in locks]
     if len(keys):
@@ -126,9 +143,12 @@ def calculate_paths():
     with index.r.pipeline() as pipe:
         pipe.multi()
         for (elm, paths) in node_paths:
-            # log.debug('{} paths for {}'.format(len(paths), elm))
             for (i, path) in enumerate(paths):
-                pipe.set('paths:{}:{}'.format(elm, i), path)
+                for step in path:
+                    for j, c in enumerate(g_cycles):
+                        if step.get('type') in c or step.get('property') in c:
+                            pipe.sadd('cycles:{}'.format(elm), j)
+                pipe.zadd('paths:{}'.format(elm), i, path)
         pipe.execute()
 
     for _, l in locks:

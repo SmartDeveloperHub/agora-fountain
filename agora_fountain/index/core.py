@@ -227,6 +227,12 @@ def get_property(prop):
     return {'domain': list(domain), 'range': list(rang), 'inverse': list(inv), 'type': ty}
 
 
+def is_property(prop):
+    return len(r.keys('*:properties:{}:*'.format(prop)))
+
+def is_type(ty):
+    return len(r.keys('*:types:{}:*'.format(ty)))
+
 def get_type(ty):
     super_types = reduce(set.union, get_by_pattern('*:types:{}:super'.format(ty), r.smembers), set([]))
     sub_types = reduce(set.union, get_by_pattern('*:types:{}:sub'.format(ty), r.smembers), set([]))
