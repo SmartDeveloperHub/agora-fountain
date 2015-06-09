@@ -277,14 +277,20 @@ def show_graph():
     types = []
     nodes = []
     edges = []
+    roots = []
 
     ibase = 0
     nodes_dict = dict([(nid, base64.b16encode(nid)) for nid in pgraph.nodes()])
     for (nid, data) in pgraph.nodes(data=True):
         if data.get('ty') == 'type':
             types.append(nid)
-            nodes.append({'data': {'id': nodes_dict[nid], 'label': nid, 'shape': 'roundrectangle',
-                          'width': len(nid) * 10}})
+            has_seeds = len(index.get_type_seeds(nid))
+            node_d = {'data': {'id': nodes_dict[nid], 'label': nid, 'shape': 'roundrectangle',
+                         'width': len(nid) * 10}}
+            if has_seeds:
+                roots.append(nodes_dict[nid])
+                node_d['classes'] = 'seed'
+            nodes.append(node_d)
             ibase += 1
         elif data.get('ty') == 'prop' and data.get('object'):
             dom = [t for (t, _) in pgraph.in_edges(nid)]
@@ -322,17 +328,7 @@ def show_graph():
 
         ibase += len(st_edges) + 1
 
-    sorted_nodes = [(nodes_dict[t], pgraph.in_degree(t)) for t in types]
-    sorted_nodes = sorted(sorted_nodes, key=lambda (nid, d): d)
-
-    roots = [n for n, d in sorted_nodes if not d]
-    if not len(roots):
-        try:
-            roots = sorted_nodes[0]
-        except IndexError:
-            pass
-
-    return render_template('graph.html',
+    return render_template('graph-vocabs.html',
                            nodes=json.dumps(nodes),
                            edges=json.dumps(edges), roots=json.dumps(roots))
 

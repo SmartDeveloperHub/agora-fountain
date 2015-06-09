@@ -2,8 +2,6 @@
  * Created by fserena on 3/06/15.
  */
 
-console.log('graph.js loaded!');
-
 $(function () { // on dom ready
 
     var cy = cytoscape({
@@ -31,11 +29,9 @@ $(function () { // on dom ready
                 'content': 'data(label)',
                 'color': '#f0f0f0'
             })
-            .selector('.highlighted')
+            .selector('node.highlighted')
             .css({
-                'background-color': '#06a',
-                'line-color': '#004894',
-                'target-arrow-color': '#05a',
+                'background-color': '#037',
                 'transition-property': 'background-color, line-color, target-arrow-color, color',
                 'transition-duration': '0.5s',
                 'color': 'white'
@@ -45,6 +41,12 @@ $(function () { // on dom ready
                 'source-arrow-shape': 'triangle',
                 'source-arrow-fill': 'hollow',
                 'target-arrow-shape': 'none'
+            }).selector('node.seed')
+            .css({
+                'border-color': '#08f',
+                'border-width': 5,
+                'border-opacity': 0.7,
+                'background-color': '#06a'
             }),
 
         elements: {
@@ -101,8 +103,8 @@ $(function () { // on dom ready
     vGraph.roots.forEach(function (r, index) {
         cy.bfs.push(
             {
-                index: 0,
-                bfs: cy.elements().bfs('#' + vGraph.roots[0], function () {
+                index: index,
+                bfs: cy.elements().bfs('#' + vGraph.roots[index], function () {
                 }, true)
             }
         );
@@ -115,7 +117,7 @@ $(function () { // on dom ready
             b.index++;
             setTimeout(function () {
                 highlightNextEle(b);
-            }, 1000);
+            }, 200);
         }
     };
 
