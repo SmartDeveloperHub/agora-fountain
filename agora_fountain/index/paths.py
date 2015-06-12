@@ -64,7 +64,9 @@ def build_paths(node, root, steps=None):
     paths = []
     if steps is None:
         steps = []
-    for t in [x for x in pgraph.predecessors(node) if x != root]:
+    pred = pgraph.predecessors(node)
+    # pred = [d for d in pred if not set.intersection(set(index.get_type(d).get('super')), set(pred))]
+    for t in [x for x in pred if x != root]:
         step = {'property': node, 'type': t}
         if step in steps:
             continue

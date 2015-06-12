@@ -37,6 +37,7 @@ import networkx as nx
 import itertools
 import base64
 
+
 class APIError(Exception):
     status_code = 400
 
@@ -51,6 +52,7 @@ class APIError(Exception):
         rv = dict(self.payload or ())
         rv['message'] = self.message
         return rv
+
 
 class NotFound(APIError):
     def __init__(self, message, payload=None):
@@ -81,6 +83,7 @@ def get_vocabularies():
 
     return response
 
+
 @app.route('/vocabs/<vid>')
 def get_vocabulary(vid):
     """
@@ -93,9 +96,11 @@ def get_vocabulary(vid):
 
     return response
 
+
 def analyse_vocabulary(vid):
     index.extract_vocabulary(vid)
     calculate_paths()
+
 
 @app.route('/vocabs', methods=['POST'])
 @consumes('text/turtle')
@@ -117,6 +122,7 @@ def add_vocabulary():
     response.status_code = 201
     response.headers['Location'] = vid
     return response
+
 
 @app.route('/vocabs/<vid>', methods=['PUT'])
 @consumes('text/turtle')
@@ -160,6 +166,7 @@ def delete_vocabulary(vid):
     response.status_code = 200
     return response
 
+
 @app.route('/prefixes')
 def get_prefixes():
     """
@@ -167,6 +174,7 @@ def get_prefixes():
     :return:
     """
     return jsonify(prefixes())
+
 
 @app.route('/types')
 def get_types():
@@ -238,13 +246,7 @@ def add_seed():
     return make_response()
 
 
-@app.route('/paths/<elm>')
-def get_path(elm):
-    """
-    Return a path to a specific elem (either a property or a type, always prefixed)
-    :param elm: The required prefixed type/property
-    :return:
-    """
+def __get_path(elm):
     paths = []
     seed_paths = []
     for path, score in index.r.zrange('paths:{}'.format(elm), 0, -1, withscores=True):
@@ -259,7 +261,7 @@ def get_path(elm):
             if len(type_seeds):
                 cycles = [int(c) for c in index.r.smembers('cycles:{}'.format(elm))]
                 all_cycles = all_cycles.union(set(cycles))
-                sub_path = {'cycles': cycles, 'seeds': type_seeds, 'steps': list(reversed(path[:i+1]))}
+                sub_path = {'cycles': cycles, 'seeds': type_seeds, 'steps': list(reversed(path[:i + 1]))}
                 if not (sub_path in seed_paths):
                     seed_paths.append(sub_path)
 
@@ -269,7 +271,82 @@ def get_path(elm):
         seed_paths.append({'seeds': req_type_seeds, 'steps': []})
 
     all_cycles = [{'cycle': int(cid), 'steps': eval(index.r.zrange('cycles', cid, cid).pop())} for cid in all_cycles]
-    return jsonify({'paths': list(seed_paths), 'all-cycles': all_cycles})
+    return list(seed_paths), all_cycles
+
+
+def __graph_path(elm, paths, cycles):
+    nodes = []
+    edges = []
+    roots = set([])
+    mem_edges = set([])
+
+    for path in paths:
+        steps = path['steps']
+        last_node = None
+        last_prop = None
+        for i, step in enumerate(steps):
+            ty = step['type']
+            prop = step['property']
+            node_d = {'data': {'id': base64.b16encode(ty), 'label': ty, 'shape': 'roundrectangle',
+                               'width': len(ty) * 10}}
+            if not i:
+                roots.add(base64.b16encode(ty))
+                node_d['classes'] = 'seed'
+
+            nodes.append(node_d)
+            if last_node is not None and (last_node, last_prop, ty) not in mem_edges:
+                edges.append(
+                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node), 'label': last_prop,
+                              'target': base64.b16encode(ty)}})
+                mem_edges.add((last_node, last_prop, ty))
+            last_node = ty
+            last_prop = prop
+
+        if index.is_type(elm):
+            nodes.append({'data': {'id': base64.b16encode(elm), 'label': elm, 'shape': 'roundrectangle',
+                                   'width': len(elm) * 10}, 'classes': 'end'})
+            if (last_node, last_prop, elm) not in mem_edges:
+                edges.append(
+                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node), 'label': last_prop,
+                              'target': base64.b16encode(elm)}})
+                mem_edges.add((last_node, last_prop, elm))
+        else:
+            prop = index.get_property(elm)
+            prop_range = prop['range']
+            prop_range = [d for d in prop_range if not set.intersection(set(index.get_type(d).get('super')),
+                                                                        set(prop_range))]
+            prop_type = prop['type']
+            for r in prop_range:
+                shape = 'roundrectangle'
+                if prop_type == 'data':
+                    shape = 'ellipse'
+                nodes.append({'data': {'id': base64.b16encode(r), 'label': r, 'shape': shape,
+                                       'width': len(elm) * 10}})
+                if (last_node, elm, r) not in mem_edges:
+                    edges.append(
+                        {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node), 'label': elm,
+                                  'target': base64.b16encode(r)}, 'classes': 'end'})
+                    mem_edges.add((last_node, elm, r))
+
+    return nodes, edges, list(roots)
+
+
+@app.route('/paths/<elm>')
+@app.route('/paths/<elm>/view')
+def get_path(elm):
+    """
+    Return a path to a specific elem (either a property or a type, always prefixed)
+    :param elm: The required prefixed type/property
+    :return:
+    """
+    seed_paths, all_cycles = __get_path(elm)
+    if 'view' in request.url_rule.rule:
+        nodes, edges, roots = __graph_path(elm, seed_paths, all_cycles)
+        return render_template('graph-path.html',
+                               nodes=json.dumps(nodes),
+                               edges=json.dumps(edges), roots=json.dumps(roots))
+    else:
+        return jsonify({'paths': seed_paths, 'all-cycles': all_cycles})
 
 
 @app.route('/graph/')
@@ -286,7 +363,7 @@ def show_graph():
             types.append(nid)
             has_seeds = len(index.get_type_seeds(nid))
             node_d = {'data': {'id': nodes_dict[nid], 'label': nid, 'shape': 'roundrectangle',
-                         'width': len(nid) * 10}}
+                               'width': len(nid) * 10}}
             if has_seeds:
                 roots.append(nodes_dict[nid])
                 node_d['classes'] = 'seed'
@@ -321,7 +398,7 @@ def show_graph():
         supertypes = [s for s in supertypes if not set.intersection(set(index.get_type(s).get('sub')),
                                                                     set(supertypes))]
         st_edges = [{'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[st], 'label': '',
-                     'target': nodes_dict[t]}, 'classes': 'subclass'}
+                              'target': nodes_dict[t]}, 'classes': 'subclass'}
                     for i, st in enumerate(supertypes) if st in nodes_dict]
         if len(st_edges):
             edges.extend(st_edges)
@@ -331,4 +408,3 @@ def show_graph():
     return render_template('graph-vocabs.html',
                            nodes=json.dumps(nodes),
                            edges=json.dumps(edges), roots=json.dumps(roots))
-

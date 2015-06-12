@@ -38,7 +38,7 @@ log = logging.getLogger('agora_fountain.index')
 pool = redis.ConnectionPool(host='localhost', port=6379, db=0)
 r = redis.StrictRedis(connection_pool=pool)
 r.flushall()
-tpool = ThreadPoolExecutor(1)
+tpool = ThreadPoolExecutor(20)
 
 def get_by_pattern(pattern, func):
     def get_all():
