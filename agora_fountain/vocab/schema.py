@@ -45,6 +45,7 @@ def qname(uri):
     q = uri.n3(_graph.namespace_manager)
     return q
 
+
 def _extend_prefixed(pu):
     parts = pu.split(':')
     if len(parts) == 1:
@@ -58,26 +59,32 @@ def _extend_prefixed(pu):
 def graph():
     return _graph
 
+
 def prefixes(vid=None):
     context = _graph
     if vid is not None:
         context = context.get_context(vid)
     return list(context.namespaces())
 
+
 def contexts():
     return [str(x.identifier) for x in _graph.contexts()]
+
 
 def update_context(vid, g):
     context = _graph.get_context(vid)
     _graph.remove_context(context)
     add_context(vid, g)
 
+
 def remove_context(vid):
     context = _graph.get_context(vid)
     _graph.remove_context(context)
 
+
 def get_context(vid):
     return _graph.get_context(vid)
+
 
 def add_context(vid, g):
     vid_context = _graph.get_context(vid)
@@ -90,6 +97,7 @@ def add_context(vid, g):
 
     _namespaces.update([(uri, prefix) for (prefix, uri) in _graph.namespaces()])
     _prefixes.update([(prefix, uri) for (prefix, uri) in _graph.namespaces()])
+
 
 def get_types(vid=None):
     context = _graph
@@ -107,6 +115,7 @@ def get_types(vid=None):
 
     return res
 
+
 def get_properties(vid=None):
     context = _graph
     if vid is not None:
@@ -118,6 +127,7 @@ def get_properties(vid=None):
 
     return res
 
+
 def get_property_domain(prop, vid=None):
     context = _graph
     if vid is not None:
@@ -128,11 +138,12 @@ def get_property_domain(prop, vid=None):
         dom.update(get_subtypes(t, vid))
         dom.add(t)
     res = [qname(c[0])
-                for c in context.query("""SELECT ?c WHERE { ?c rdfs:subClassOf [ owl:onProperty %s ]}""" % prop)]
+           for c in context.query("""SELECT ?c WHERE { ?c rdfs:subClassOf [ owl:onProperty %s ]}""" % prop)]
     dom.update(res)
     for t in res:
         dom.update(get_subtypes(t, vid))
     return dom
+
 
 def is_object_property(prop, vid=None):
     context = _graph
@@ -150,6 +161,7 @@ def is_object_property(prop, vid=None):
 
     return is_object
 
+
 def get_property_range(prop, vid=None):
     context = _graph
     if vid is not None:
@@ -164,22 +176,22 @@ def get_property_range(prop, vid=None):
                            if isinstance(z, URIRef)])
             sub_ts.add(qname(y))
         res = [qname(r[0]) for r in
-                       context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:allValuesFrom ?r.}""" % prop)
-                       if isinstance(r[0], URIRef)]
+               context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:allValuesFrom ?r.}""" % prop)
+               if isinstance(r[0], URIRef)]
         sub_ts.update(res)
         for t in res:
             sub_ts.update(get_subtypes(t, vid))
 
         res = [qname(r[0]) for r in
-                       context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:someValuesFrom ?r.}""" % prop)
-                       if isinstance(r[0], URIRef)]
+               context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:someValuesFrom ?r.}""" % prop)
+               if isinstance(r[0], URIRef)]
         sub_ts.update(res)
         for t in res:
             sub_ts.update(get_subtypes(t, vid))
 
         res = [qname(r[0]) for r in
-                       context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:onClass ?r.}""" % prop)
-                       if isinstance(r[0], URIRef)]
+               context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:onClass ?r.}""" % prop)
+               if isinstance(r[0], URIRef)]
         sub_ts.update(res)
         for t in res:
             sub_ts.update(get_subtypes(t, vid))
@@ -190,34 +202,38 @@ def get_property_range(prop, vid=None):
                        if isinstance(r[0], URIRef)])
     return sub_ts
 
+
 def get_property_inverses(prop, vid=None):
     context = _graph
     if vid is not None:
         context = context.get_context(vid)
     inverses = set([])
     inverses.update([qname(p) for p in context.objects(subject=_extend_prefixed(prop), predicate=OWL.inverseOf)
-                    if isinstance(p, URIRef)])
+                     if isinstance(p, URIRef)])
     inverses.update([qname(p) for p in context.subjects(object=_extend_prefixed(prop), predicate=OWL.inverseOf)
-                    if isinstance(p, URIRef)])
+                     if isinstance(p, URIRef)])
 
     return inverses
+
 
 def get_supertypes(ty, vid=None):
     context = _graph
     if vid is not None:
         context = context.get_context(vid)
     res = map(lambda x: qname(x), filter(lambda y: isinstance(y, URIRef),
-              context.transitive_objects(_extend_prefixed(ty), RDFS.subClassOf)))
+                                         context.transitive_objects(_extend_prefixed(ty), RDFS.subClassOf)))
     return filter(lambda x: str(x) != ty, res)
+
 
 def get_subtypes(ty, vid=None):
     context = _graph
     if vid is not None:
         context = context.get_context(vid)
     res = map(lambda x: qname(x), filter(lambda y: isinstance(y, URIRef),
-              context.transitive_subjects(RDFS.subClassOf, _extend_prefixed(ty))))
+                                         context.transitive_subjects(RDFS.subClassOf, _extend_prefixed(ty))))
 
     return filter(lambda x: str(x) != ty, res)
+
 
 def get_type_properties(ty, vid=None):
     context = _graph
@@ -225,13 +241,18 @@ def get_type_properties(ty, vid=None):
         context = context.get_context(vid)
     res = set([])
     res.update(map(lambda x: qname(x), context.subjects(RDFS.domain, _extend_prefixed(ty))))
+    res.update(
+            [qname(p[0]) for p in context.query("""SELECT ?p WHERE {%s rdfs:subClassOf [ owl:onProperty ?p ]}""" % ty)
+             if isinstance(p[0], URIRef)])
     for sc in get_supertypes(ty, vid):
         res.update(map(lambda x: qname(x), context.subjects(RDFS.domain, _extend_prefixed(sc))))
 
-    res.update([qname(p[0]) for p in context.query("""SELECT ?p WHERE {%s rdfs:subClassOf [ owl:onProperty ?p ]}""" % ty)
-                if isinstance(p[0], URIRef)])
+        res.update(
+            [qname(p[0]) for p in context.query("""SELECT ?p WHERE {%s rdfs:subClassOf [ owl:onProperty ?p ]}""" % sc)
+             if isinstance(p[0], URIRef)])
 
     return res
+
 
 def get_type_references(ty, vid=None):
     context = _graph
@@ -248,5 +269,3 @@ def get_type_references(ty, vid=None):
                                                                     {?r owl:allValuesFrom %s} UNION
                                                                     {?r owl:onClass %s} .}""" % (ty, ty, ty))])
     return res
-
-

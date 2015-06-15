@@ -33,7 +33,6 @@ from agora_fountain.server import app
 from flask_negotiate import consumes
 import json
 from jobs import scheduler
-import networkx as nx
 import itertools
 import base64
 
