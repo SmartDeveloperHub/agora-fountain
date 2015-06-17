@@ -29,13 +29,13 @@ import agora_fountain.vocab.schema as sch
 import agora_fountain.vocab.onto as vocs
 import base64
 from datetime import datetime as dt
-import time
 from concurrent.futures.thread import ThreadPoolExecutor
 import logging
+from agora_fountain.server import app
 
 log = logging.getLogger('agora_fountain.index')
 
-pool = redis.ConnectionPool(host='localhost', port=6379, db=0)
+pool = redis.ConnectionPool(host=app.config['REDIS'], port=6379, db=0)
 r = redis.StrictRedis(connection_pool=pool)
 r.flushall()
 tpool = ThreadPoolExecutor(20)

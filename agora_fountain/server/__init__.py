@@ -24,8 +24,10 @@
 
 __author__ = 'Fernando Serena'
 
+import os
 from flask import Flask
-from agora_fountain.server import config
+
+config = os.environ.get('CONFIG', 'agora_fountain.server.config.DevelopmentConfig')
 
 app = Flask(__name__)
 app.config.from_object(config)
