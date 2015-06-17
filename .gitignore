@@ -5,3 +5,4 @@ graph_store/
 *.egg-info
 *.owl
 *.xml
+dist/

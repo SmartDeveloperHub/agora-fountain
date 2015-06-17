@@ -22,19 +22,24 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
+__author__ = 'Fernando Serena'
+
 from setuptools import setup, find_packages
 
 setup(
     name="Agora-Fountain",
-    version="0.2.2",
+    version="0.2.12",
     author="Fernando Serena",
     author_email="fernando.serena@centeropenmiddleware.com",
     description="The Agora core service for ontology paths discovery and seed management",
     license="Apache 2",
-    keywords="linked-data agora ontology paths",
-    url="",
-    namespace_packages=['agora_fountain'],
+    keywords=["linked-data", "ontology", "path"],
+    url="https://github.com/smartdeveloperhub/agora-fountain",
+    download_url="https://github.com/smartdeveloperhub/agora-fountain/tarball/0.2.2",
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
-    include_package_data=True,
-    install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'APScheduler']
+    install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'APScheduler', 'rdflib', 'networkx'],
+    classifiers=[],
+    scripts=['fountain'],
+    package_dir={'agora_fountain': 'agora_fountain', 'agora_fountain.server': 'agora_fountain/server'},
+    package_data={'agora_fountain.server': ['templates/*.*', 'static/*.*']},
 )
