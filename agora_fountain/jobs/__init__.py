@@ -24,14 +24,12 @@
 
 __author__ = 'Fernando Serena'
 
-from pytz import utc
-
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.redis import RedisJobStore
-from apscheduler.executors.pool import ProcessPoolExecutor
+from agora_fountain.server import app
 
 jobstores = {
-    'default': RedisJobStore(db=2)
+    'default': RedisJobStore(db=2, host=app.config['REDIS'])
 }
 executors = {
     'default': {'type': 'threadpool', 'max_workers': 20}
