@@ -25,11 +25,11 @@
 __author__ = 'Fernando Serena'
 
 from flask import make_response, request, jsonify, render_template
-from agora_fountain.vocab.schema import prefixes
-import agora_fountain.index.core as index
-from agora_fountain.index.paths import calculate_paths, pgraph
-import agora_fountain.vocab.onto as vocs
-from agora_fountain.server import app
+from agora.fountain.vocab.schema import prefixes
+import agora.fountain.index.core as index
+from agora.fountain.index.paths import calculate_paths, pgraph
+import agora.fountain.vocab.onto as vocs
+from agora.fountain.server import app
 from flask_negotiate import consumes
 import json
 from jobs import scheduler

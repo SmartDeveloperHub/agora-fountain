@@ -24,23 +24,10 @@
 
 __author__ = 'Fernando Serena'
 
-from setuptools import setup, find_packages
+import os
+from flask import Flask
 
-setup(
-    name="Agora-Fountain",
-    version="0.2.13",
-    author="Fernando Serena",
-    author_email="fernando.serena@centeropenmiddleware.com",
-    description="The Agora core service for ontology paths discovery and seed management",
-    license="Apache 2",
-    keywords=["linked-data", "ontology", "path"],
-    url="https://github.com/smartdeveloperhub/agora-fountain",
-    download_url="https://github.com/smartdeveloperhub/agora-fountain/tarball/0.2.2",
-    packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
-    namespace_packages=['agora'],
-    install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'APScheduler', 'rdflib', 'networkx'],
-    classifiers=[],
-    scripts=['fountain'],
-    package_dir={'agora_fountain': 'agora_fountain', 'agora_fountain.server': 'agora_fountain/server'},
-    package_data={'agora_fountain.server': ['templates/*.*', 'static/*.*']},
-)
+config = os.environ.get('CONFIG', 'agora.fountain.server.config.DevelopmentConfig')
+
+app = Flask(__name__)
+app.config.from_object(config)

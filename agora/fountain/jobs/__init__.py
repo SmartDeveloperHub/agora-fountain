@@ -10,7 +10,7 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  You may obtain a copy of the License at 
 
             http://www.apache.org/licenses/LICENSE-2.0
 
@@ -24,9 +24,25 @@
 
 __author__ = 'Fernando Serena'
 
-import pkg_resources
-try:
-    pkg_resources.declare_namespace(__name__)
-except ImportError:
-    import pkgutil
-    __path__ = pkgutil.extend_path(__path__, __name__)
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.redis import RedisJobStore
+from agora.fountain.server import app
+
+jobstores = {
+    'default': RedisJobStore(db=2, host=app.config['REDIS'])
+}
+executors = {
+    'default': {'type': 'threadpool', 'max_workers': 20}
+    # 'processpool': ProcessPoolExecutor(max_workers=5)
+}
+job_defaults = {
+    # 'coalesce': False,
+    # 'max_instances': 3
+}
+scheduler = BackgroundScheduler()
+
+# .. do something else here, maybe add jobs etc.
+
+scheduler.configure(jobstores=jobstores, executors=executors, job_defaults=job_defaults)
+
+scheduler.start()

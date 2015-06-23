@@ -10,7 +10,7 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  You may obtain a copy of the License at 
 
             http://www.apache.org/licenses/LICENSE-2.0
 
@@ -23,11 +23,3 @@
 """
 
 __author__ = 'Fernando Serena'
-
-import os
-from flask import Flask
-
-config = os.environ.get('CONFIG', 'agora_fountain.server.config.DevelopmentConfig')
-
-app = Flask(__name__)
-app.config.from_object(config)

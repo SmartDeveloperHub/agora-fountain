@@ -26,7 +26,7 @@
 __author__ = 'Fernando Serena'
 
 import logging
-from agora_fountain.server import app
+from agora.fountain.server import app
 
 log_level = app.config['LOG']
 
@@ -42,7 +42,7 @@ logger.addHandler(ch)
 logger.setLevel(log_level)
 
 
-from agora_fountain import api
+from agora.fountain import api
 
 app.logger.info('Listening!')
 app.run(host='0.0.0.0', port=app.config['PORT'], debug=True, use_reloader=False)

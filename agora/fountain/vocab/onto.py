@@ -27,7 +27,7 @@ __author__ = 'Fernando Serena'
 from rdflib import Graph, RDF
 from rdflib.namespace import OWL
 import StringIO
-import agora_fountain.vocab.schema as sch
+import agora.fountain.vocab.schema as sch
 
 class VocabularyException(Exception):
     def __init__(self, message):

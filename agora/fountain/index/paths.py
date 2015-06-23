@@ -25,7 +25,7 @@
 __author__ = 'Fernando Serena'
 
 import logging
-from agora_fountain.index import core as index
+from agora.fountain.index import core as index
 from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime as dt
 import networkx as nx

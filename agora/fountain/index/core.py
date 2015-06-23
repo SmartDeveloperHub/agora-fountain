@@ -25,13 +25,13 @@
 __author__ = 'Fernando Serena'
 
 import redis
-import agora_fountain.vocab.schema as sch
-import agora_fountain.vocab.onto as vocs
+import agora.fountain.vocab.schema as sch
+import agora.fountain.vocab.onto as vocs
 import base64
 from datetime import datetime as dt
 from concurrent.futures.thread import ThreadPoolExecutor
 import logging
-from agora_fountain.server import app
+from agora.fountain.server import app
 
 log = logging.getLogger('agora_fountain.index')
 
