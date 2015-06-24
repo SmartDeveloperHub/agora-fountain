@@ -27,6 +27,7 @@ __author__ = 'Fernando Serena'
 import logging
 from agora.fountain.index import core as index
 from concurrent.futures.thread import ThreadPoolExecutor
+from concurrent.futures import wait, ALL_COMPLETED
 from datetime import datetime as dt
 import networkx as nx
 
@@ -130,16 +131,15 @@ def calculate_paths():
 
     node_paths = []
     futures = []
-    with ThreadPoolExecutor(1) as th_pool:
+    with ThreadPoolExecutor(20) as th_pool:
         for node, data in pgraph.nodes(data=True):
             futures.append(th_pool.submit(__calculate_node_paths, node, data))
-        while len(futures):
-            for f in futures:
-                if f.done():
-                    elm, res = f.result()
-                    if len(res):
-                        node_paths.append((elm, res))
-                    futures.remove(f)
+        wait(futures, timeout=None, return_when=ALL_COMPLETED)
+        for f in futures:
+            if f.done():
+                elm, res = f.result()
+                if len(res):
+                    node_paths.append((elm, res))
         th_pool.shutdown()
 
     with index.r.pipeline() as pipe:
