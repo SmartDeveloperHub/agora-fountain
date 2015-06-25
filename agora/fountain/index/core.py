@@ -33,7 +33,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 import logging
 from agora.fountain.server import app
 
-log = logging.getLogger('agora_fountain.index')
+log = logging.getLogger('agora.fountain.index')
 
 pool = redis.ConnectionPool(host=app.config['REDIS'], port=6379, db=1)
 r = redis.StrictRedis(connection_pool=pool)

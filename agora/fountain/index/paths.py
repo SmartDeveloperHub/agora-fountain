@@ -31,7 +31,7 @@ from concurrent.futures import wait, ALL_COMPLETED
 from datetime import datetime as dt
 import networkx as nx
 
-log = logging.getLogger('agora_fountain.paths')
+log = logging.getLogger('agora.fountain.paths')
 
 pgraph = nx.DiGraph()
 rgraph = nx.DiGraph()
