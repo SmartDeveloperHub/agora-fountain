@@ -37,7 +37,7 @@ ch.setLevel(log_level)
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 logger.setLevel(log_level)
-logger = logging.getLogger('agora_fountain')
+logger = logging.getLogger('agora.fountain')
 logger.addHandler(ch)
 logger.setLevel(log_level)
 
