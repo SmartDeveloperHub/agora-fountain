@@ -5,3 +5,4 @@ Flask-Negotiate==0.1.0
 rdflib==4.2.0
 APScheduler
 networkx
+futures

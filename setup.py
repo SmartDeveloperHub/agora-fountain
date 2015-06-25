@@ -28,7 +28,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="Agora-Fountain",
-    version="0.2.15",
+    version="0.2.16",
     author="Fernando Serena",
     author_email="fernando.serena@centeropenmiddleware.com",
     description="The Agora core service for ontology paths discovery and seed management",
@@ -38,7 +38,7 @@ setup(
     download_url="https://github.com/smartdeveloperhub/agora-fountain/tarball/0.2.2",
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     namespace_packages=['agora'],
-    install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'APScheduler', 'rdflib', 'networkx'],
+    install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'APScheduler', 'rdflib', 'networkx', 'futures'],
     classifiers=[],
     scripts=['fountain'],
     package_dir={'agora_fountain': 'agora_fountain', 'agora_fountain.server': 'agora_fountain/server'},
