@@ -30,10 +30,10 @@ from rdflib.namespace import OWL, RDF, RDFS
 log = logging.getLogger('agora_fountain.schema')
 
 log.info('Loading ontology...'),
-# _graph = ConjunctiveGraph('Sleepycat')
-_graph = ConjunctiveGraph()
+_graph = ConjunctiveGraph('Sleepycat')
+# _graph = ConjunctiveGraph()
 _graph.store.graph_aware = False
-# _graph.open('graph_store', create=True)
+_graph.open('graph_store', create=True)
 log.debug('\n{}'.format(_graph.serialize(format='turtle')))
 log.info('Ready')
 
