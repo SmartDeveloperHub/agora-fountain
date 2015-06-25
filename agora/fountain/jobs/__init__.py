@@ -29,7 +29,7 @@ from apscheduler.jobstores.redis import RedisJobStore
 from agora.fountain.server import app
 
 jobstores = {
-    'default': RedisJobStore(db=2, host=app.config['REDIS'])
+    'default': RedisJobStore(db=1, host=app.config['REDIS'])
 }
 executors = {
     'default': {'type': 'threadpool', 'max_workers': 20}
