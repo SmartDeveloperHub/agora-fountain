@@ -28,7 +28,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="Agora-Fountain",
-    version="0.2.16",
+    version="0.2.18",
     author="Fernando Serena",
     author_email="fernando.serena@centeropenmiddleware.com",
     description="The Agora core service for ontology paths discovery and seed management",
@@ -41,6 +41,6 @@ setup(
     install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'APScheduler', 'rdflib', 'networkx', 'futures'],
     classifiers=[],
     scripts=['fountain'],
-    package_dir={'agora_fountain': 'agora_fountain', 'agora_fountain.server': 'agora_fountain/server'},
-    package_data={'agora_fountain.server': ['templates/*.*', 'static/*.*']},
+    package_dir={'agora.fountain': 'agora/fountain', 'agora.fountain.server': 'agora/fountain/server'},
+    package_data={'agora.fountain.server': ['templates/*.*', 'static/*.*']},
 )
