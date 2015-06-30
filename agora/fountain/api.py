@@ -115,7 +115,7 @@ def add_vocabulary():
     except vocs.DuplicateVocabulary, e:
         raise Conflict(e.message)
 
-    scheduler.add_job(analyse_vocabulary, args=[vid])
+    analyse_vocabulary(vid)
 
     response = make_response()
     response.status_code = 201
@@ -139,7 +139,7 @@ def update_vocabulary(vid):
     except Exception, e:
         raise APIError(e.message)
 
-    scheduler.add_job(analyse_vocabulary, args=[vid])
+    analyse_vocabulary(vid)
 
     response = make_response()
     response.status_code = 200
@@ -159,7 +159,7 @@ def delete_vocabulary(vid):
     except vocs.UnknownVocabulary, e:
         raise NotFound(e.message)
 
-    scheduler.add_job(analyse_vocabulary, args=[vid])
+    analyse_vocabulary(vid)
 
     response = make_response()
     response.status_code = 200
