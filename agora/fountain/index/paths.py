@@ -60,6 +60,7 @@ def build_directed_graph():
 
     print 'graph', list(pgraph.edges())
 
+build_directed_graph()
 
 def build_paths(node, root, steps=None):
     paths = []

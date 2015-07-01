@@ -32,7 +32,6 @@ import agora.fountain.vocab.onto as vocs
 from agora.fountain.server import app
 from flask_negotiate import consumes
 import json
-from jobs import scheduler
 import itertools
 import base64
 
@@ -287,7 +286,7 @@ def __graph_path(elm, paths, cycles):
             ty = step['type']
             prop = step['property']
             node_d = {'data': {'id': base64.b16encode(ty), 'label': ty, 'shape': 'roundrectangle',
-                               'width': len(ty) * 10}}
+                               'width': max(100, len(ty) * 12)}}
             if not i:
                 roots.add(base64.b16encode(ty))
                 node_d['classes'] = 'seed'
@@ -295,7 +294,7 @@ def __graph_path(elm, paths, cycles):
             nodes.append(node_d)
             if last_node is not None and (last_node, last_prop, ty) not in mem_edges:
                 edges.append(
-                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node), 'label': last_prop,
+                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node), 'label': last_prop + '\n\n\n',
                               'target': base64.b16encode(ty)}})
                 mem_edges.add((last_node, last_prop, ty))
             last_node = ty
@@ -306,7 +305,7 @@ def __graph_path(elm, paths, cycles):
                                    'width': len(elm) * 10}, 'classes': 'end'})
             if (last_node, last_prop, elm) not in mem_edges:
                 edges.append(
-                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node), 'label': last_prop,
+                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node), 'label': last_prop + '\n\n\n',
                               'target': base64.b16encode(elm)}})
                 mem_edges.add((last_node, last_prop, elm))
         else:
@@ -323,7 +322,7 @@ def __graph_path(elm, paths, cycles):
                                        'width': len(elm) * 10}})
                 if (last_node, elm, r) not in mem_edges:
                     edges.append(
-                        {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node), 'label': elm,
+                        {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node), 'label': elm + '\n\n',
                                   'target': base64.b16encode(r)}, 'classes': 'end'})
                     mem_edges.add((last_node, elm, r))
 
@@ -375,7 +374,7 @@ def show_graph():
             ran = [r for r in ran if not set.intersection(set(index.get_type(r).get('super')), set(ran))]
 
             op_edges = list(itertools.product(*[dom, ran]))
-            edges.extend([{'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid,
+            edges.extend([{'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid + '\n\n',
                                     'target': nodes_dict[tg]}} for i, (s, tg) in enumerate(op_edges)])
             ibase += len(op_edges) + 1
         else:
@@ -388,7 +387,7 @@ def show_graph():
                 for i, (s, t) in enumerate(dp_edges):
                     rid = 'n{}'.format(len(nodes_dict) + len(nodes))
                     nodes.append({'data': {'id': rid, 'label': t, 'width': len(t) * 10, 'shape': 'ellipse'}})
-                    edges.append({'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid,
+                    edges.append({'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid + '\n\n',
                                            'target': rid}})
                 ibase += len(dp_edges) + 1
 

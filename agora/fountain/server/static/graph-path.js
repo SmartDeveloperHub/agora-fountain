@@ -11,30 +11,50 @@ $(function () { // on dom ready
             .selector('node')
             .css({
                 'content': 'data(label)',
-                'color': '#d0d0d0',
+                'color': '#484849',
                 'shape': 'data(shape)',
-                'width': 'mapData(width, 1, 150, 1, 150)',
+                'width': 'mapData(width, 1, 200, 1, 200)',
                 'height': '40',
                 'text-valign': 'center',
-                'text-outline-width': 2,
-                'text-outline-color': '#303030',
-                'background-color': '#303030'
+                'background-color': 'white',
+                'background-opacity': 0.2,
+                'font-weight': 'regular',
+                'font-family': 'EagerNaturalist',
+                'font-size': '22px'
             })
             .selector('edge')
             .css({
                 'target-arrow-shape': 'triangle',
-                'width': 3,
-                'line-color': '#555',
-                'target-arrow-color': '#aaa',
+                //'width': 3,
+                'line-color': '#484849',
+                'target-arrow-color': '#484849',
                 'content': 'data(label)',
-                'color': '#e0e0e0'
-            })
-            .selector('node.highlighted')
+                'color': '#484849',
+                'edge-text-rotation': 'autorotate',
+                'text-valign': 'top',
+                'text-wrap': 'wrap',
+                'curve-style': 'bezier',
+                'font-family': 'EagerNaturalist',
+                'font-size': '18px'
+            }).selector('edge.highlighted')
             .css({
-                'background-color': '#037',
-                'transition-property': 'background-color, line-color, target-arrow-color, color',
-                'transition-duration': '0.5s',
-                'color': 'white'
+                'transition-property': 'line-color, target-arrow-color, color, border-width, shadow-color, visibility',
+                'transition-duration': '0.8s',
+                'visibility': 'visible'
+            }).selector('node.highlighted')
+            .css({
+                'transition-property': 'background-color, line-color, target-arrow-color, color, border-width, shadow-color, visibility',
+                'transition-duration': '0.8s',
+                'color': '#484849',
+                'border-width': 2,
+                'border-opacity': 0.7,
+                'font-weight': 'regular',
+                'shadow-color': '#484849',
+                'shadow-opacity': 0.5,
+                'shadow-offset-x': 0,
+                'shadow-offset-y': 0,
+                'shadow-blur': 2,
+                'visibility': 'visible'
             }).selector('edge.subclass')
             .css({
                 'line-style': 'dashed',
@@ -43,21 +63,25 @@ $(function () { // on dom ready
                 'target-arrow-shape': 'none'
             }).selector('node.seed')
             .css({
-                'border-color': '#08f',
-                'border-width': 5,
-                'border-opacity': 0.7
-                //'background-color': '#06a'
+                'border-color': '#0078B6',
+                'shadow-color': '#0078B6',
+                'visibility': 'visible',
+                'color': '#0078B6'
             }).selector('edge.end')
             .css({
-                'line-color': '#2a2',
-                'target-arrow-color': '#292',
-                'color': 'white'
+                'line-color': '#1F8A1F',
+                'color': '#1F8A1F',
+                'target-arrow-color': '#1F8A1F',
+                'text-shadow-color': '#1F8A1F',
+                'text-shadow-opacity': 0.1,
+                'text-shadow-offset-x': 0,
+                'text-shadow-offset-y': 0,
+                'text-shadow-blur': 2
             }).selector('node.end')
             .css({
-                'border-color': '#2a2',
-                'border-width': 5,
-                'border-opacity': 0.7,
-                'background-color': '#037'
+                'border-color': '#1F8A1F',
+                'shadow-color': '#1F8A1F',
+                'color': '#1F8A1F'
             }),
 
         elements: {

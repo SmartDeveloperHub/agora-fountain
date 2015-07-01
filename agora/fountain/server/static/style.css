@@ -1,3 +1,50 @@
+@font-face {
+    font-family: LoveYaLikeASister;
+    src: url("LoveYaLikeASister.eot?") format("eot"), url("LoveYaLikeASister.woff") format("woff"), url("LoveYaLikeASister.ttf") format("truetype"), url("LoveYaLikeASister.svg#LoveYaLikeASister") format("svg");
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: EagerNaturalist;
+    src: url("eager.eot?") format("eot"), url("eager.woff") format("woff"), url("eager.ttf") format("truetype"), url("eager.svg#EagerNaturalist") format("svg");
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    font-family: EagerNaturalist, sans-serif;
+    background-image: url("paper.jpg");
+    background-repeat: repeat;
+    color: #484849;
+}
+
+#cy {
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+#brand {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    background-image: url("logo-sdh.png");
+    z-index: -1;
+    width: 200px;
+    height: 79px;
+    background-repeat: no-repeat;
+    margin: 15px;
+}
+
+p {
+    margin: 7px;
+    font-size: 18px;
+    padding-left: 10%;
+}
+
 body {
   font: 14px helvetica neue, helvetica, arial, sans-serif;
 }

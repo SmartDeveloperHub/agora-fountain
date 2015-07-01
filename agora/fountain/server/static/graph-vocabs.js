@@ -11,36 +11,44 @@ $(function () { // on dom ready
             .selector('node')
             .css({
                 'content': 'data(label)',
-                'color': '#d0d0d0',
                 'shape': 'data(shape)',
-                'width': 'mapData(width, 1, 150, 1, 150)',
+                'width': 'mapData(width, 1, 300, 1, 300)',
                 'height': '40',
                 'text-valign': 'center',
-                'text-outline-width': 2,
-                'text-outline-color': '#303030',
-                'background-color': '#303030'
+                'background-color': 'white',
+                'background-opacity': 0.2,
+                'font-family': 'EagerNaturalist',
+                'font-size': '22px',
+                'color': '#484849',
+                'border-width': 2,
+                'border-opacity': 0.7,
+                'font-weight': 'regular',
+                'shadow-color': '#484849',
+                'shadow-opacity': 0.5,
+                'shadow-offset-x': 0,
+                'shadow-offset-y': 0,
+                'shadow-blur': 2
             })
             .selector('edge')
             .css({
                 'target-arrow-shape': 'triangle',
-                'width': 3,
-                'line-color': '#555',
-                'target-arrow-color': '#aaa',
+                'line-color': '#484849',
+                'target-arrow-color': '#484849',
                 'content': 'data(label)',
-                'color': '#f0f0f0'
-            })
-            .selector('node.highlighted')
-            .css({
-                'background-color': '#037',
-                'transition-property': 'background-color, line-color, target-arrow-color, color',
-                'transition-duration': '0.5s',
-                'color': 'white'
+                'color': '#484849',
+                'edge-text-rotation': 'autorotate',
+                'text-valign': 'top',
+                'text-wrap': 'wrap',
+                'curve-style': 'bezier',
+                'font-family': 'EagerNaturalist',
+                'font-size': '18px'
             }).selector('edge.subclass')
             .css({
                 'line-style': 'dashed',
                 'source-arrow-shape': 'triangle',
                 'source-arrow-fill': 'hollow',
-                'target-arrow-shape': 'none'
+                'target-arrow-shape': 'none',
+                'source-arrow-color': '#484849'
             }).selector('node.seed')
             .css({
                 'border-color': '#08f',
@@ -110,21 +118,21 @@ $(function () { // on dom ready
         );
     });
 
-    var highlightNextEle = function (b) {
-        b.bfs.path[b.index].addClass('highlighted');
-
-        if (b.index < b.bfs.path.length) {
-            b.index++;
-            setTimeout(function () {
-                highlightNextEle(b);
-            }, 200);
-        }
-    };
-
-    // kick off first highlights
-    cy.bfs.forEach(function (b) {
-        highlightNextEle(b);
-    });
+    //var highlightNextEle = function (b) {
+    //    b.bfs.path[b.index].addClass('highlighted');
+    //
+    //    if (b.index < b.bfs.path.length) {
+    //        b.index++;
+    //        setTimeout(function () {
+    //            highlightNextEle(b);
+    //        }, 200);
+    //    }
+    //};
+    //
+    //// kick off first highlights
+    //cy.bfs.forEach(function (b) {
+    //    highlightNextEle(b);
+    //});
 
 
 }); // on dom ready
