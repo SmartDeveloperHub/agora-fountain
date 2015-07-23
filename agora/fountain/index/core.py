@@ -40,12 +40,15 @@ r = redis.StrictRedis(connection_pool=pool)
 # r.flushall()
 tpool = ThreadPoolExecutor(20)
 
+
 def get_by_pattern(pattern, func):
     def get_all():
         for k in pkeys:
             yield func(k)
+
     pkeys = r.keys(pattern)
     return list(get_all())
+
 
 def remove_from_sets(values, *args):
     for pattern in args:
@@ -56,7 +59,10 @@ def remove_from_sets(values, *args):
             if len(key_parts) > 1:
                 ef_values = filter(lambda x: x.split(':')[0] != key_parts[1], values)
             if len(ef_values):
-                r.srem(dk, *ef_values)
+                try:
+                    r.srem(dk, *ef_values)
+                except Exception:
+                    print 'error with {}'.format(dk)
 
 
 def delete_vocabulary(vid):
@@ -100,8 +106,6 @@ def extract_type(t, vid):
             pipe.sadd('vocabs:{}:types:{}:refs'.format(vid, t), s)
         pipe.execute()
 
-    # print '... in {}s'.format((dt.now() - start_time).total_seconds())
-
 
 def extract_property(p, vid):
     def p_type():
@@ -110,8 +114,6 @@ def extract_property(p, vid):
         else:
             return 'data'
 
-    # print 'property {}'.format(p),
-    start_time = dt.now()
     with r.pipeline() as pipe:
         pipe.multi()
         pipe.sadd('vocabs:{}:properties'.format(vid), p)
@@ -124,7 +126,6 @@ def extract_property(p, vid):
             pipe.sadd('vocabs:{}:properties:{}:inverse'.format(vid, p), dc)
         pipe.set('vocabs:{}:properties:{}:type'.format(vid, p), p_type())
         pipe.execute()
-    # print '... in {}s'.format((dt.now() - start_time).total_seconds())
 
 
 def extract_types(vid):
@@ -152,6 +153,7 @@ def extract_types(vid):
     for v, p in dependent_props:
         futures.append(tpool.submit(extract_property, p, v))
     return types, futures
+
 
 def extract_properties(vid):
     properties = sch.get_properties(vid)
@@ -194,6 +196,7 @@ def get_seeds():
         for st in seed_types:
             for seed in list(r.smembers(st)):
                 yield base64.b64decode(seed)
+
     return list(iterator())
 
 
@@ -230,8 +233,10 @@ def get_property(prop):
 def is_property(prop):
     return len(r.keys('*:properties:{}:*'.format(prop)))
 
+
 def is_type(ty):
     return len(r.keys('*:types:{}:*'.format(ty)))
+
 
 def get_type(ty):
     super_types = reduce(set.union, get_by_pattern('*:types:{}:super'.format(ty), r.smembers), set([]))

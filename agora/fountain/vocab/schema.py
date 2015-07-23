@@ -105,6 +105,7 @@ def get_types(vid=None):
         context = context.get_context(vid)
     res = set([])
     res.update([qname(x) for x in context.subjects(RDF.type, OWL.Class) if isinstance(x, URIRef)])
+    res.update([qname(x) for x in context.objects(predicate=RDFS.subClassOf) if isinstance(x, URIRef)])
     res.update([qname(x[0]) for x in
                 context.query("""SELECT ?o WHERE {?p a owl:ObjectProperty. ?p rdfs:range ?o .}""")
                 if isinstance(x[0], URIRef)])
