@@ -29,15 +29,18 @@ from rdflib.namespace import OWL
 import StringIO
 import agora.fountain.vocab.schema as sch
 
+
 class VocabularyException(Exception):
     def __init__(self, message):
         Exception.__init__(self)
         self.message = message
 
+
 class DuplicateVocabulary(VocabularyException):
     def __init__(self, message):
         Exception.__init__(self)
         self.message = message
+
 
 class UnknownVocabulary(VocabularyException):
     def __init__(self, message):
@@ -63,6 +66,7 @@ def add_vocabulary(owl):
     sch.add_context(vid, owl_g)
     return vid
 
+
 def update_vocabulary(vid, owl):
     owl_vid, uri, owl_g = __load_owl(owl)
 
@@ -74,14 +78,17 @@ def update_vocabulary(vid, owl):
 
     sch.update_context(vid, owl_g)
 
+
 def delete_vocabulary(vid):
     if vid not in sch.contexts():
         raise UnknownVocabulary('Vocabulary id is not known')
 
     sch.remove_context(vid)
 
+
 def get_vocabularies():
     return sch.contexts()
+
 
 def get_vocabulary(vid):
     return sch.get_context(vid).serialize(format='turtle')

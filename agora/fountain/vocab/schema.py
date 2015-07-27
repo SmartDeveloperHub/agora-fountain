@@ -243,8 +243,8 @@ def get_type_properties(ty, vid=None):
     res = set([])
     res.update(map(lambda x: qname(x), context.subjects(RDFS.domain, _extend_prefixed(ty))))
     res.update(
-            [qname(p[0]) for p in context.query("""SELECT ?p WHERE {%s rdfs:subClassOf [ owl:onProperty ?p ]}""" % ty)
-             if isinstance(p[0], URIRef)])
+        [qname(p[0]) for p in context.query("""SELECT ?p WHERE {%s rdfs:subClassOf [ owl:onProperty ?p ]}""" % ty)
+         if isinstance(p[0], URIRef)])
     for sc in get_supertypes(ty, vid):
         res.update(map(lambda x: qname(x), context.subjects(RDFS.domain, _extend_prefixed(sc))))
 
