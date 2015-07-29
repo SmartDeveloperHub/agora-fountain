@@ -33,7 +33,6 @@ class Config(object):
         'graph': 'graph_store'
     }
     PORT = 5002
-    STORE = 'persist'
 
 
 class DevelopmentConfig(Config):
@@ -43,6 +42,7 @@ class DevelopmentConfig(Config):
         'host': 'localhost',
         'db': 1
     }
+    STORE = 'persist'
 
 
 class TestingConfig(Config):
@@ -63,3 +63,4 @@ class ProductionConfig(Config):
         'host': 'localhost',
         'db': 1
     }
+    STORE = 'persist'

@@ -9,6 +9,7 @@ def setup():
 
     app.config['TESTING'] = True
     app.config.from_object(TestingConfig)
+    app.config['STORE'] = 'memory'
 
     from agora.fountain.index.core import r
     r.flushdb()
