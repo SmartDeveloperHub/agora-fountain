@@ -26,14 +26,19 @@ __author__ = 'Fernando Serena'
 import logging
 from rdflib import ConjunctiveGraph, URIRef, BNode
 from rdflib.namespace import OWL, RDF, RDFS
+from agora.fountain.server import app
 
 log = logging.getLogger('agora_fountain.schema')
 
+store_mode = app.config['STORE']
+if 'persist' in store_mode:
+    graph = ConjunctiveGraph('Sleepycat')
+    graph.open('graph_store', create=True)
+else:
+    graph = ConjunctiveGraph()
+
 log.info('Loading ontology...'),
-# graph = ConjunctiveGraph('Sleepycat')
-graph = ConjunctiveGraph()
 graph.store.graph_aware = False
-# graph.open('graph_store', create=True)
 log.debug('\n{}'.format(graph.serialize(format='turtle')))
 log.info('Ready')
 
