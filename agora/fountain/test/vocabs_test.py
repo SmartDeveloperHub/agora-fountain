@@ -13,7 +13,7 @@ class VocabsTest(FountainTest):
         eq_(len(vocabs), False, 'Fountain should be empty')
 
     def b_test_post_dummy_vocab(self):
-        with open('vocabs/dummy.ttl') as f:
+        with open('agora/fountain/test/vocabs/dummy.ttl') as f:
             dummy_vocab = f.read()
             rv = self.app.post('/vocabs', data=dummy_vocab, headers={'Content-Type': 'text/turtle'})
             eq_(rv.status_code, 201, 'The vocabulary was not created properly')
