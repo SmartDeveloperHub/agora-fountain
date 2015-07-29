@@ -1,18 +1,23 @@
 __author__ = 'fernando'
 
 import unittest
-from agora.fountain.api import app
-from agora.fountain.index.core import r
-from agora.fountain.vocab.schema import graph
-from agora.fountain.server.config import TestingConfig
+from agora.fountain.server import app
 
 
 def setup():
+    from agora.fountain.server.config import TestingConfig
+
     app.config['TESTING'] = True
     app.config.from_object(TestingConfig)
+
+    from agora.fountain.index.core import r
+    from agora.fountain.vocab.schema import graph
+
     for c in graph.contexts():
         graph.remove_context(c)
     r.flushdb()
+
+    from agora.fountain import api
 
 
 class FountainTest(unittest.TestCase):
