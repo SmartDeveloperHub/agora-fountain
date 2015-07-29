@@ -6,3 +6,4 @@ graph_store/
 *.owl
 *.xml
 dist/
+.coverage

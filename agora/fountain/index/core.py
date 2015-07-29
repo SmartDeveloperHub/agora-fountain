@@ -35,9 +35,9 @@ from agora.fountain.server import app
 
 log = logging.getLogger('agora.fountain.index')
 
-pool = redis.ConnectionPool(host=app.config['REDIS'], port=6379, db=1)
+redis_conf = app.config['REDIS']
+pool = redis.ConnectionPool(host=redis_conf.get('host'), port=6379, db=redis_conf.get('db'))
 r = redis.StrictRedis(connection_pool=pool)
-# r.flushall()
 tpool = ThreadPoolExecutor(20)
 
 

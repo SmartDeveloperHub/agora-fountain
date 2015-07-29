@@ -27,21 +27,37 @@ __author__ = 'Fernando Serena'
 import os
 import logging
 
+
 class Config(object):
     STORE_PATHS = {
         'graph': 'graph_store'
     }
     PORT = 5002
 
+
 class DevelopmentConfig(Config):
     DEBUG = True
     LOG = logging.DEBUG
-    REDIS = 'localhost'
+    REDIS = {
+        'host': 'localhost',
+        'db': 1
+    }
+
+
+class TestingConfig(Config):
+    DEBUG = False
+    LOG = logging.DEBUG
+    REDIS = {
+        'host': 'localhost',
+        'db': 2
+    }
+    TESTING = True
+
 
 class ProductionConfig(Config):
     DEBUG = False
     LOG = logging.INFO
-    REDIS = 'redis'
-
-
-
+    REDIS = {
+        'host': 'localhost',
+        'db': 1
+    }

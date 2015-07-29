@@ -45,4 +45,6 @@ logger.setLevel(log_level)
 from agora.fountain import api
 
 app.logger.info('Listening!')
-app.run(host='0.0.0.0', port=app.config['PORT'], debug=True, use_reloader=False)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=app.config['PORT'], debug=True, use_reloader=False)

@@ -30,19 +30,26 @@ from rdflib.namespace import OWL, RDF, RDFS
 log = logging.getLogger('agora_fountain.schema')
 
 log.info('Loading ontology...'),
-_graph = ConjunctiveGraph('Sleepycat')
-# _graph = ConjunctiveGraph()
-_graph.store.graph_aware = False
-_graph.open('graph_store', create=True)
-log.debug('\n{}'.format(_graph.serialize(format='turtle')))
+graph = ConjunctiveGraph('Sleepycat')
+graph.store.graph_aware = False
+graph.open('graph_store', create=True)
+log.debug('\n{}'.format(graph.serialize(format='turtle')))
 log.info('Ready')
 
 _namespaces = {}
 _prefixes = {}
 
 
+def flat_slice(lst):
+    lst = list(lst)
+    for i, _ in enumerate(lst):
+        while hasattr(lst[i], "__iter__") and not isinstance(lst[i], basestring):
+            lst[i:i + 1] = lst[i]
+    return set(lst)
+
+
 def qname(uri):
-    q = uri.n3(_graph.namespace_manager)
+    q = uri.n3(graph.namespace_manager)
     return q
 
 
@@ -56,38 +63,34 @@ def _extend_prefixed(pu):
         return BNode(pu)
 
 
-def graph():
-    return _graph
-
-
 def prefixes(vid=None):
-    context = _graph
+    context = graph
     if vid is not None:
         context = context.get_context(vid)
     return list(context.namespaces())
 
 
 def contexts():
-    return [str(x.identifier) for x in _graph.contexts()]
+    return [str(x.identifier) for x in graph.contexts()]
 
 
 def update_context(vid, g):
-    context = _graph.get_context(vid)
-    _graph.remove_context(context)
+    context = graph.get_context(vid)
+    graph.remove_context(context)
     add_context(vid, g)
 
 
 def remove_context(vid):
-    context = _graph.get_context(vid)
-    _graph.remove_context(context)
+    context = graph.get_context(vid)
+    graph.remove_context(context)
 
 
 def get_context(vid):
-    return _graph.get_context(vid)
+    return graph.get_context(vid)
 
 
 def add_context(vid, g):
-    vid_context = _graph.get_context(vid)
+    vid_context = graph.get_context(vid)
     for t in g.triples((None, None, None)):
         vid_context.add(t)
 
@@ -95,21 +98,22 @@ def add_context(vid, g):
         if p != '':
             vid_context.bind(p, u)
 
-    _namespaces.update([(uri, prefix) for (prefix, uri) in _graph.namespaces()])
-    _prefixes.update([(prefix, uri) for (prefix, uri) in _graph.namespaces()])
+    _namespaces.update([(uri, prefix) for (prefix, uri) in graph.namespaces()])
+    _prefixes.update([(prefix, uri) for (prefix, uri) in graph.namespaces()])
 
 
 def get_types(vid=None):
-    context = _graph
+    context = graph
     if vid is not None:
         context = context.get_context(vid)
     res = set([])
-    res.update([qname(x) for x in context.subjects(RDF.type, OWL.Class) if isinstance(x, URIRef)])
-    res.update([qname(x) for x in context.objects(predicate=RDFS.subClassOf) if isinstance(x, URIRef)])
-    res.update([qname(x[0]) for x in
-                context.query("""SELECT ?o WHERE {?p a owl:ObjectProperty. ?p rdfs:range ?o .}""")
-                if isinstance(x[0], URIRef)])
-    res.update([qname(x) for x in context.objects(predicate=RDFS.domain) if isinstance(x, URIRef)])
+    q_class_result = context.query("""SELECT DISTINCT ?c ?x WHERE {{?c a owl:Class} UNION {?c rdfs:subClassOf ?x}}""")
+    classes_set = flat_slice(q_class_result)
+    res.update([qname(c) for c in classes_set if isinstance(c, URIRef)])
+    q_class_result = context.query(
+                    """SELECT DISTINCT ?r ?d WHERE {?p a owl:ObjectProperty. {?p rdfs:range ?r .} UNION {?p rdfs:domain ?d.}}""")
+    classes_set = flat_slice(q_class_result)
+    res.update([qname(c) for c in classes_set if isinstance(c, URIRef)])
     res.update([qname(x[0]) for x in context.query("""SELECT DISTINCT ?c WHERE {{?r owl:allValuesFrom ?c}
                                                     UNION {?a owl:someValuesFrom ?c}
                                                     UNION {?b owl:onClass ?c}}""") if isinstance(x[0], URIRef)])
@@ -118,7 +122,7 @@ def get_types(vid=None):
 
 
 def get_properties(vid=None):
-    context = _graph
+    context = graph
     if vid is not None:
         context = context.get_context(vid)
     res = set([])
@@ -130,7 +134,7 @@ def get_properties(vid=None):
 
 
 def get_property_domain(prop, vid=None):
-    context = _graph
+    context = graph
     if vid is not None:
         context = context.get_context(vid)
     res = map(lambda x: qname(x), context.objects(_extend_prefixed(prop), RDFS.domain))
@@ -147,7 +151,7 @@ def get_property_domain(prop, vid=None):
 
 
 def is_object_property(prop, vid=None):
-    context = _graph
+    context = graph
     if vid is not None:
         context = context.get_context(vid)
     type_res = context.query("""ASK {%s a owl:ObjectProperty}""" % prop)
@@ -164,7 +168,7 @@ def is_object_property(prop, vid=None):
 
 
 def get_property_range(prop, vid=None):
-    context = _graph
+    context = graph
     if vid is not None:
         context = context.get_context(vid)
     sub_ts = set([])
@@ -205,7 +209,7 @@ def get_property_range(prop, vid=None):
 
 
 def get_property_inverses(prop, vid=None):
-    context = _graph
+    context = graph
     if vid is not None:
         context = context.get_context(vid)
     inverses = set([])
@@ -218,7 +222,7 @@ def get_property_inverses(prop, vid=None):
 
 
 def get_supertypes(ty, vid=None):
-    context = _graph
+    context = graph
     if vid is not None:
         context = context.get_context(vid)
     res = map(lambda x: qname(x), filter(lambda y: isinstance(y, URIRef),
@@ -227,7 +231,7 @@ def get_supertypes(ty, vid=None):
 
 
 def get_subtypes(ty, vid=None):
-    context = _graph
+    context = graph
     if vid is not None:
         context = context.get_context(vid)
     res = map(lambda x: qname(x), filter(lambda y: isinstance(y, URIRef),
@@ -237,7 +241,7 @@ def get_subtypes(ty, vid=None):
 
 
 def get_type_properties(ty, vid=None):
-    context = _graph
+    context = graph
     if vid is not None:
         context = context.get_context(vid)
     res = set([])
@@ -256,7 +260,7 @@ def get_type_properties(ty, vid=None):
 
 
 def get_type_references(ty, vid=None):
-    context = _graph
+    context = graph
     if vid is not None:
         context = context.get_context(vid)
     query = """SELECT ?p WHERE { ?p rdfs:range %s }"""
