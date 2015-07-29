@@ -11,10 +11,6 @@ def setup():
     app.config.from_object(TestingConfig)
 
     from agora.fountain.index.core import r
-    from agora.fountain.vocab.schema import graph
-
-    for c in graph.contexts():
-        graph.remove_context(c)
     r.flushdb()
 
     from agora.fountain import api
