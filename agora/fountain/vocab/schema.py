@@ -31,7 +31,6 @@ from agora.fountain.server import app
 log = logging.getLogger('agora_fountain.schema')
 
 store_mode = app.config['STORE']
-print store_mode
 if 'persist' in store_mode:
     graph = ConjunctiveGraph('Sleepycat')
     graph.open('graph_store', create=True)
