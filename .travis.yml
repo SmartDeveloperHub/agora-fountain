@@ -1,11 +1,13 @@
 language: python
 python:
   - "2.7"
-before_script: sudo redis-server /etc/redis/redis.conf --port 6379
+before_script:
+  - sudo redis-server /etc/redis/redis.conf --port 6379
+  - pip install coverage
 # command to install dependencies
 install: "pip install -r requirements.txt"
 # command to run tests
-script: nosetests
+script: nosetests -v --with-coverage --cover-package=agora
 branches:
   only:
     - travis
