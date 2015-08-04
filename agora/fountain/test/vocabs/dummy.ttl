@@ -43,9 +43,7 @@ test:prop2 rdf:type owl:ObjectProperty ;
 
 ###  http://www.smartdeveloperhub.org/vocabulary/test#Concept1
 
-test:Concept1 rdf:type owl:Class ;
-
-              rdfs:subClassOf scm:Commit .
+test:Concept1 rdf:type owl:Class .
 
 
 
