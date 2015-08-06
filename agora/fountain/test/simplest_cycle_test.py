@@ -29,24 +29,24 @@ import json
 from nose.tools import *
 
 
-class DummyTest(FountainTest):
+class SimplestCycleTest(FountainTest):
     def a_test_empty_vocabs(self):
         vocabs = json.loads(self.get('/vocabs'))
         eq_(len(vocabs), False, 'Fountain should be empty')
 
-    def b_test_post_dummy_vocab(self):
+    def b_test_post_vocab(self):
         with open('agora/fountain/test/vocabs/dummy.ttl') as f:
             dummy_vocab = f.read()
             self.post('/vocabs', dummy_vocab, message='The vocabulary was not created properly')
 
-    def c_test_contains_dummy(self):
+    def c_test_contains_vocab(self):
         vocabs = json.loads(self.get('/vocabs'))
         eq_(len(vocabs), 1, 'Fountain should contain the dummy vocab')
         assert 'test' in vocabs, 'The prefix of the contained vocabulary must be "test"'
         vocab = self.get('/vocabs/test')
         assert len(vocab), 'RDF must not be empty'
 
-    def c1_test_dummy_properties(self):
+    def c1_test_properties(self):
         graph = self.graph
         props = sorted(graph.properties)
         eq_(len(props), 2, 'Fountain should contain two properties, but found: %s' % len(props))
@@ -73,7 +73,7 @@ class DummyTest(FountainTest):
         p2_inverse = graph.get_inverse_property('test:prop2')
         eq_(p2_inverse, 'test:prop1', 'test:prop1 is the inverse of test:prop2')
 
-    def c1_test_dummy_types(self):
+    def c1_test_types(self):
         graph = self.graph
         types = sorted(graph.types)
         eq_(len(types), 2, 'Fountain should contain two types, but found: %s' % len(types))
@@ -96,5 +96,31 @@ class DummyTest(FountainTest):
         eq_(len(c2_refs), 1, 'Concept2 must have 1 reference')
         assert 'test:prop1' in c2_refs
 
-    def d_test_delete_dummy_vocab(self):
+    def c2_test_paths_no_seeds(self):
+        seeds = json.loads(self.get('/seeds'))["seeds"]
+        eq_(len(seeds), False, 'There should not be any seed available')
+        c1_paths = json.loads(self.get('paths/test:Concept1'))
+        eq_(len(c1_paths["paths"]), False, 'Impossible...No seeds, no paths')
+
+    def c3_test_paths_with_self_seed(self):
+        seed_uri = "http://localhost/seed"
+        self.post('/seeds', json.dumps({"uri": seed_uri, "type": "test:Concept1"}), content_type='application/json')
+        seeds = json.loads(self.get('/seeds'))["seeds"]
+        assert len(seeds) == 1 and seed_uri in seeds, '%s should be the only seed available'
+        c1_paths = json.loads(self.get('paths/test:Concept1'))
+        c1_paths_list = c1_paths["paths"]
+        eq_(len(c1_paths_list), 1, 'Only one path was expected')
+        c1_path = c1_paths_list.pop()
+        eq_(len(c1_path['steps']), 0, 'Steps list should be empty')
+        eq_(len(c1_path['seeds']), 1, 'test:Concept1 seed was expected')
+        c1_path_seed = c1_path['seeds'].pop()
+        eq_(c1_path_seed, seed_uri, 'Someone has changed it maliciously...')
+
+    def d_test_delete_vocab(self):
         self.delete('/vocabs/test', 'The test vocabulary should exist previously')
+        vocabs = json.loads(self.get('/vocabs'))
+        eq_(len(vocabs), False, 'Fountain should be empty again')
+        types = json.loads(self.get('/types'))["types"]
+        eq_(len(types), False, 'There should not be any type available')
+        props = json.loads(self.get('/properties'))["properties"]
+        eq_(len(props), False, 'There should not be any property available')
