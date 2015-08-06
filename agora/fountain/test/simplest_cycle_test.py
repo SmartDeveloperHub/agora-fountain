@@ -60,6 +60,8 @@ class DummyTest(FountainTest):
         p1_range = graph.get_property_range('test:prop1')
         eq_(len(p1_range), 1, 'prop1 must have 1 range type')
         assert 'test:Concept2' in p1_range
+        p1_inverse = graph.get_inverse_property('test:prop1')
+        eq_(p1_inverse, 'test:prop2', 'test:prop2 is the inverse of test:prop1')
 
         # prop2
         p2_domain = graph.get_property_domain('test:prop2')
@@ -68,6 +70,8 @@ class DummyTest(FountainTest):
         p2_range = graph.get_property_range('test:prop2')
         eq_(len(p2_range), 1, 'prop2 must have 1 range type')
         assert 'test:Concept1' in p2_range
+        p2_inverse = graph.get_inverse_property('test:prop2')
+        eq_(p2_inverse, 'test:prop1', 'test:prop1 is the inverse of test:prop2')
 
     def c1_test_dummy_types(self):
         graph = self.graph
