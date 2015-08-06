@@ -234,6 +234,7 @@ def get_type_seeds(ty):
 
 
 @app.route('/seeds', methods=['POST'])
+@consumes('application/json')
 def add_seed():
     """
     Add a new seed of a specific supported type
@@ -241,7 +242,9 @@ def add_seed():
     """
     data = request.json
     index.add_seed(data.get('uri', None), data.get('type', None))
-    return make_response()
+    response = make_response()
+    response.status_code = 201
+    return response
 
 
 def __get_path(elm):
