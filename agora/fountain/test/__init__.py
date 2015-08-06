@@ -46,8 +46,8 @@ def setup():
 
 
 class AgoraGraph(nx.DiGraph):
-    def __init__(self):
-        super(AgoraGraph, self).__init__()
+    def __init__(self, data=None, **attr):
+        super(AgoraGraph, self).__init__(data, **attr)
 
     @property
     def types(self):
@@ -78,6 +78,14 @@ class AgoraGraph(nx.DiGraph):
 
     def get_property_range(self, prop):
         return self._check_node_type(self.successors, 'prop')(prop)
+
+    def get_inverse_property(self, prop):
+        cycles = list(nx.simple_cycles(self.copy()))
+        for cycle in cycles:
+            if prop in cycle and len(cycle) == 4:
+                p_index = cycle.index(prop)
+                return cycle[p_index - 2]
+        return None
 
 
 class FountainTest(unittest.TestCase):
