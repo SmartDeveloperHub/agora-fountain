@@ -106,7 +106,7 @@ class FountainTest(unittest.TestCase):
         rv = self.app.post(path, data=data, headers={'Content-Type': content_type})
         if message is None:
             message = 'The resource was not created properly'
-        eq_(rv.status_code, exp_code, message)
+        eq_(rv.status_code, exp_code, message + ": %s" % rv.status_code)
         return rv.data
 
     def delete(self, path, error_message=None):
