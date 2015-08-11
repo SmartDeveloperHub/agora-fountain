@@ -51,7 +51,7 @@ def flat_slice(lst):
     for i, _ in enumerate(lst):
         while hasattr(lst[i], "__iter__") and not isinstance(lst[i], basestring):
             lst[i:i + 1] = lst[i]
-    return set(lst)
+    return set(filter(lambda x: x is not None, lst))
 
 
 def qname(uri):
@@ -112,46 +112,73 @@ def get_types(vid=None):
     context = graph
     if vid is not None:
         context = context.get_context(vid)
-    res = set([])
-    q_class_result = context.query("""SELECT DISTINCT ?c ?x WHERE {{?c a owl:Class} UNION {?c rdfs:subClassOf ?x}}""")
-    classes_set = flat_slice(q_class_result)
-    res.update([qname(c) for c in classes_set if isinstance(c, URIRef)])
+    types = set([])
     q_class_result = context.query(
-                    """SELECT DISTINCT ?r ?d WHERE {?p a owl:ObjectProperty. {?p rdfs:range ?r .} UNION {?p rdfs:domain ?d.}}""")
+        """SELECT DISTINCT ?c ?x WHERE {
+             {
+               {?c a owl:Class}
+               UNION
+               {?c a rdfs:Class}
+               FILTER(isURI(?c))
+             }
+             OPTIONAL
+             {?c rdfs:subClassOf ?x FILTER(isURI(?x))}
+           }""")
     classes_set = flat_slice(q_class_result)
-    res.update([qname(c) for c in classes_set if isinstance(c, URIRef)])
-    res.update([qname(x[0]) for x in context.query("""SELECT DISTINCT ?c WHERE {{?r owl:allValuesFrom ?c}
-                                                    UNION {?a owl:someValuesFrom ?c}
-                                                    UNION {?b owl:onClass ?c}}""") if isinstance(x[0], URIRef)])
+    types.update([qname(c) for c in classes_set])
+    q_class_result = context.query(
+        """SELECT DISTINCT ?r ?d WHERE {
+             ?p a owl:ObjectProperty.
+             {?p rdfs:range ?r FILTER(isURI(?r))}
+             UNION
+             {?p rdfs:domain ?d FILTER(isURI(?r))}
+           }""")
+    classes_set = flat_slice(q_class_result)
+    types.update([qname(c) for c in classes_set])
+    types.update([qname(x[0]) for x in context.query(
+        """SELECT DISTINCT ?c WHERE {
+             {?r owl:allValuesFrom ?c}
+             UNION
+             {?a owl:someValuesFrom ?c}
+             UNION
+             {?b owl:onClass ?c}
+             FILTER (isURI(?c))
+           }""")])
 
-    return res
+    return types
 
 
 def get_properties(vid=None):
     context = graph
     if vid is not None:
         context = context.get_context(vid)
-    res = set([])
-    res.update([qname(c or d) for (c, d) in
-                context.query("SELECT ?c ?d WHERE { {?c a owl:ObjectProperty} UNION {?d a owl:DatatypeProperty} }")])
-    res.update([qname(p[0]) for p in context.query("SELECT ?p WHERE { ?r a owl:Restriction. ?r owl:onProperty ?p }")])
-
-    return res
+    properties = set([])
+    properties.update([qname(o or d) for (o, d) in
+                context.query(
+                    """SELECT DISTINCT ?o ?d WHERE {
+                         {?o a owl:ObjectProperty}
+                         UNION
+                         {?d a owl:DatatypeProperty}
+                         UNION
+                         {?r a owl:Restriction . ?r owl:onProperty ?o}
+                       }""")])
+    return properties
 
 
 def get_property_domain(prop, vid=None):
     context = graph
     if vid is not None:
         context = context.get_context(vid)
-    res = map(lambda x: qname(x), context.objects(_extend_prefixed(prop), RDFS.domain))
     dom = set([])
-    for t in res:
-        dom.update(get_subtypes(t, vid))
-        dom.add(t)
-    res = [qname(c[0])
-           for c in context.query("""SELECT ?c WHERE { ?c rdfs:subClassOf [ owl:onProperty %s ]}""" % prop)]
-    dom.update(res)
-    for t in res:
+    domain_set = set([qname(c[0]) for c in context.query(
+        """SELECT DISTINCT ?c WHERE {
+             { %s rdfs:domain ?c }
+             UNION
+             { ?c rdfs:subClassOf [ owl:onProperty %s ] }
+             FILTER (isURI(?c))
+           }""" % (prop, prop))])
+    dom.update(domain_set)
+    for t in domain_set:
         dom.update(get_subtypes(t, vid))
     return dom
 
@@ -161,57 +188,40 @@ def is_object_property(prop, vid=None):
     if vid is not None:
         context = context.get_context(vid)
     type_res = context.query("""ASK {%s a owl:ObjectProperty}""" % prop)
-    is_object = [_ for _ in type_res].pop()
+    object_evidence = [_ for _ in type_res].pop()
 
-    if not is_object:
-        is_object = [_ for _ in
-                     context.query("""ASK {?r owl:onProperty %s.
+    if not object_evidence:
+        object_evidence = [_ for _ in
+                           context.query("""ASK {?r owl:onProperty %s.
                                     {?r owl:someValuesFrom ?o} UNION
                                     {?r owl:allValuesFrom ?a} UNION
                                     {?r owl:onClass ?c} .}""" % prop)].pop()
-
-    return is_object
+    return object_evidence
 
 
 def get_property_range(prop, vid=None):
     context = graph
     if vid is not None:
         context = context.get_context(vid)
-    sub_ts = set([])
-    res = [t for t in context.objects(subject=_extend_prefixed(prop), predicate=RDFS.range)
-           if isinstance(t, URIRef)]
+    rang = set([])
 
-    if is_object_property(prop, vid):
-        for y in res:
-            sub_ts.update([qname(z) for z in context.transitive_subjects(RDFS.subClassOf, y)
-                           if isinstance(z, URIRef)])
-            sub_ts.add(qname(y))
-        res = [qname(r[0]) for r in
-               context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:allValuesFrom ?r.}""" % prop)
-               if isinstance(r[0], URIRef)]
-        sub_ts.update(res)
-        for t in res:
-            sub_ts.update(get_subtypes(t, vid))
+    range_set = set([qname(r[0]) for r in context.query(
+        """SELECT DISTINCT ?r WHERE {
+             {%s rdfs:range ?r}
+             UNION
+             {?d owl:onProperty %s. ?d owl:allValuesFrom ?r. FILTER(isURI(?r))}
+             UNION
+             {?d owl:onProperty %s. ?d owl:someValuesFrom ?r. FILTER(isURI(?r))}
+             UNION
+             {?d owl:onProperty %s. ?d owl:onClass ?r. FILTER(isURI(?r))}
+             UNION
+             {?d owl:onProperty %s. ?d owl:onDataRange ?r. FILTER(isURI(?r))}
+           }""" % (prop, prop, prop, prop, prop))])
 
-        res = [qname(r[0]) for r in
-               context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:someValuesFrom ?r.}""" % prop)
-               if isinstance(r[0], URIRef)]
-        sub_ts.update(res)
-        for t in res:
-            sub_ts.update(get_subtypes(t, vid))
-
-        res = [qname(r[0]) for r in
-               context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:onClass ?r.}""" % prop)
-               if isinstance(r[0], URIRef)]
-        sub_ts.update(res)
-        for t in res:
-            sub_ts.update(get_subtypes(t, vid))
-    else:
-        sub_ts.update([qname(r) for r in res])
-        sub_ts.update([qname(r[0]) for r in
-                       context.query("""SELECT ?r WHERE { ?d owl:onProperty %s. ?d owl:onDataRange ?r}""" % prop)
-                       if isinstance(r[0], URIRef)])
-    return sub_ts
+    rang.update(range_set)
+    for y in range_set:
+        rang.update(get_subtypes(y, vid))
+    return rang
 
 
 def get_property_inverses(prop, vid=None):
@@ -219,11 +229,12 @@ def get_property_inverses(prop, vid=None):
     if vid is not None:
         context = context.get_context(vid)
     inverses = set([])
-    inverses.update([qname(p) for p in context.objects(subject=_extend_prefixed(prop), predicate=OWL.inverseOf)
-                     if isinstance(p, URIRef)])
-    inverses.update([qname(p) for p in context.subjects(object=_extend_prefixed(prop), predicate=OWL.inverseOf)
-                     if isinstance(p, URIRef)])
-
+    inverses.update([qname(i[0]) for i in context.query(
+        """SELECT ?i WHERE {
+             {%s owl:inverseOf ?i}
+             UNION
+             {?i owl:inverseOf %s}
+           }""" % (prop, prop))])
     return inverses
 
 
@@ -233,7 +244,7 @@ def get_supertypes(ty, vid=None):
         context = context.get_context(vid)
     res = map(lambda x: qname(x), filter(lambda y: isinstance(y, URIRef),
                                          context.transitive_objects(_extend_prefixed(ty), RDFS.subClassOf)))
-    return filter(lambda x: str(x) != ty, res)
+    return set(filter(lambda x: str(x) != ty, res))
 
 
 def get_subtypes(ty, vid=None):
@@ -250,33 +261,41 @@ def get_type_properties(ty, vid=None):
     context = graph
     if vid is not None:
         context = context.get_context(vid)
-    res = set([])
-    res.update(map(lambda x: qname(x), context.subjects(RDFS.domain, _extend_prefixed(ty))))
-    res.update(
-        [qname(p[0]) for p in context.query("""SELECT ?p WHERE {%s rdfs:subClassOf [ owl:onProperty ?p ]}""" % ty)
-         if isinstance(p[0], URIRef)])
-    for sc in get_supertypes(ty, vid):
-        res.update(map(lambda x: qname(x), context.subjects(RDFS.domain, _extend_prefixed(sc))))
-
-        res.update(
-            [qname(p[0]) for p in context.query("""SELECT ?p WHERE {%s rdfs:subClassOf [ owl:onProperty ?p ]}""" % sc)
-             if isinstance(p[0], URIRef)])
-
-    return res
+    props = set([])
+    all_types = get_supertypes(ty, vid)
+    all_types.add(ty)
+    for sc in all_types:
+        props.update(
+            [qname(p[0]) for p in context.query(
+                """SELECT ?p WHERE {
+                     {%s rdfs:subClassOf [ owl:onProperty ?p ]}
+                     UNION
+                     {?p rdfs:domain %s}
+                     FILTER (isURI(?p))
+                   }""" % (sc, sc))])
+    return props
 
 
 def get_type_references(ty, vid=None):
     context = graph
     if vid is not None:
         context = context.get_context(vid)
-    query = """SELECT ?p WHERE { ?p rdfs:range %s }"""
-    res = set([])
-    res.update(map(lambda x: qname(x[0]), context.query(query % ty)))
-    for sc in get_supertypes(ty, vid):
-        res.update(map(lambda x: qname(x[0]), context.query(query % sc)))
-
-    res.update([qname(x[0]) for x in context.query("""SELECT ?p WHERE {?r owl:onProperty ?p.
-                                                                    {?r owl:someValuesFrom %s} UNION
-                                                                    {?r owl:allValuesFrom %s} UNION
-                                                                    {?r owl:onClass %s} .}""" % (ty, ty, ty))])
-    return res
+    refs = set([])
+    all_types = get_supertypes(ty, vid)
+    all_types.add(ty)
+    for sc in all_types:
+        refs.update(
+            [qname(p[0]) for p in context.query(
+                """SELECT ?p WHERE {
+                    { ?r owl:onProperty ?p.
+                      {?r owl:someValuesFrom %s}
+                      UNION
+                      {?r owl:allValuesFrom %s}
+                      UNION
+                      {?r owl:onClass %s}
+                    }
+                    UNION
+                    {?p rdfs:range %s}
+                    FILTER (isURI(?p))
+                  }""" % (sc, sc, sc, sc))])
+    return refs
