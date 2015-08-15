@@ -21,17 +21,20 @@
   limitations under the License.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
+from redis.exceptions import RedisError, BusyLoadingError
 
 __author__ = 'Fernando Serena'
 
 import redis
 import agora.fountain.vocab.schema as sch
+from agora.fountain.index.exceptions import FountainError
 import agora.fountain.vocab.onto as vocs
-import base64
 from datetime import datetime as dt
 from concurrent.futures.thread import ThreadPoolExecutor
 import logging
 from agora.fountain.server import app
+import sys
+
 
 log = logging.getLogger('agora.fountain.index')
 
@@ -40,95 +43,98 @@ pool = redis.ConnectionPool(host=redis_conf.get('host'), port=6379, db=redis_con
 r = redis.StrictRedis(connection_pool=pool)
 tpool = ThreadPoolExecutor(20)
 
+# Ping redis to check if it's ready
+requests = 0
+while True:
+    try:
+        r.keys('*')
+        break
+    except BusyLoadingError as re:
+        log.warning(re.message)
+    except RedisError:
+        break
 
-def get_by_pattern(pattern, func):
+
+def __get_by_pattern(pattern, func):
     def get_all():
         for k in pkeys:
             yield func(k)
 
-    pkeys = r.keys(pattern)
-    return list(get_all())
+    try:
+        pkeys = r.keys(pattern)
+        return list(get_all())
+    except RedisError as e:
+        raise FountainError(e.message)
 
 
-def remove_from_sets(values, *args):
-    for pattern in args:
-        keys = r.keys(pattern)
-        for dk in keys:
-            key_parts = dk.split(':')
-            ef_values = values
-            if len(key_parts) > 1:
-                ef_values = filter(lambda x: x.split(':')[0] != key_parts[1], values)
-            if len(ef_values):
-                try:
+def __remove_from_sets(values, *args):
+    try:
+        for pattern in args:
+            keys = r.keys(pattern)
+            for dk in keys:
+                key_parts = dk.split(':')
+                ef_values = values
+                if len(key_parts) > 1:
+                    ef_values = filter(lambda x: x.split(':')[0] != key_parts[1], values)
+                if len(ef_values):
                     r.srem(dk, *ef_values)
-                except Exception:
-                    print 'error with {}'.format(dk)
+    except RedisError as e:
+        raise FountainError(e.message)
 
 
-def delete_vocabulary(vid):
-    v_types = get_types(vid)
-    if len(v_types):
-        remove_from_sets(v_types, '*:domain', '*:range', '*:sub', '*:super')
-    v_props = get_properties(vid)
-    if len(v_props):
-        remove_from_sets(v_props, '*:refs', '*:props')
-    v_keys = r.keys('vocabs:{}:*'.format(vid))
-    if len(v_keys):
-        r.delete(*v_keys)
+def __get_vocab_set(pattern, vid=None):
+    try:
+        if vid is not None:
+            pattern = pattern.replace(':*:', ':%s:' % vid)
+        all_sets = map(lambda x: r.smembers(x), r.keys(pattern))
+        return list(reduce(set.union, all_sets, set([])))
+    except RedisError as e:
+        raise FountainError(e.message)
 
 
-def extract_vocabulary(vid):
-    log.info('Extracting vocabulary {}...'.format(vid))
-    delete_vocabulary(vid)
-    start_time = dt.now()
-    types, t_futures = extract_types(vid)
-    properties, p_futures = extract_properties(vid)
-    for f in t_futures + p_futures:
-        f.result()
-    log.info('Done (in {}ms)'.format((dt.now() - start_time).total_seconds() * 1000))
-    return types, properties
+def __extract_type(t, vid):
+    try:
+        with r.pipeline() as pipe:
+            pipe.multi()
+            pipe.sadd('vocabs:{}:types'.format(vid), t)
+            for s in sch.get_supertypes(t):
+                pipe.sadd('vocabs:{}:types:{}:super'.format(vid, t), s)
+            for s in sch.get_subtypes(t):
+                pipe.sadd('vocabs:{}:types:{}:sub'.format(vid, t), s)
+            for s in sch.get_type_properties(t):
+                pipe.sadd('vocabs:{}:types:{}:props'.format(vid, t), s)
+            for s in sch.get_type_references(t):
+                pipe.sadd('vocabs:{}:types:{}:refs'.format(vid, t), s)
+            pipe.execute()
+    except RedisError as e:
+        raise FountainError(e.message)
 
 
-def extract_type(t, vid):
-    # print 'type {}'.format(t),
-
-    start_time = dt.now()
-    with r.pipeline() as pipe:
-        pipe.multi()
-        pipe.sadd('vocabs:{}:types'.format(vid), t)
-        for s in sch.get_supertypes(t):
-            pipe.sadd('vocabs:{}:types:{}:super'.format(vid, t), s)
-        for s in sch.get_subtypes(t):
-            pipe.sadd('vocabs:{}:types:{}:sub'.format(vid, t), s)
-        for s in sch.get_type_properties(t):
-            pipe.sadd('vocabs:{}:types:{}:props'.format(vid, t), s)
-        for s in sch.get_type_references(t):
-            pipe.sadd('vocabs:{}:types:{}:refs'.format(vid, t), s)
-        pipe.execute()
-
-
-def extract_property(p, vid):
+def __extract_property(p, vid):
     def p_type():
         if sch.is_object_property(p):
             return 'object'
         else:
             return 'data'
 
-    with r.pipeline() as pipe:
-        pipe.multi()
-        pipe.sadd('vocabs:{}:properties'.format(vid), p)
-        pipe.hset('vocabs:{}:properties:{}'.format(vid, p), 'uri', p)
-        for dc in list(sch.get_property_domain(p)):
-            pipe.sadd('vocabs:{}:properties:{}:domain'.format(vid, p), dc)
-        for dc in list(sch.get_property_range(p)):
-            pipe.sadd('vocabs:{}:properties:{}:range'.format(vid, p), dc)
-        for dc in list(sch.get_property_inverses(p)):
-            pipe.sadd('vocabs:{}:properties:{}:inverse'.format(vid, p), dc)
-        pipe.set('vocabs:{}:properties:{}:type'.format(vid, p), p_type())
-        pipe.execute()
+    try:
+        with r.pipeline() as pipe:
+            pipe.multi()
+            pipe.sadd('vocabs:{}:properties'.format(vid), p)
+            pipe.hset('vocabs:{}:properties:{}'.format(vid, p), 'uri', p)
+            for dc in list(sch.get_property_domain(p)):
+                pipe.sadd('vocabs:{}:properties:{}:domain'.format(vid, p), dc)
+            for dc in list(sch.get_property_range(p)):
+                pipe.sadd('vocabs:{}:properties:{}:range'.format(vid, p), dc)
+            for dc in list(sch.get_property_inverses(p)):
+                pipe.sadd('vocabs:{}:properties:{}:inverse'.format(vid, p), dc)
+            pipe.set('vocabs:{}:properties:{}:type'.format(vid, p), p_type())
+            pipe.execute()
+    except RedisError as e:
+        raise FountainError(e.message)
 
 
-def extract_types(vid):
+def __extract_types(vid):
     types = sch.get_types(vid)
 
     other_vocabs = filter(lambda x: x != vid, vocs.get_vocabularies())
@@ -148,14 +154,15 @@ def extract_types(vid):
 
     types = set.union(set([(vid, t) for t in types]), dependent_types)
     futures = []
+    # TODO: Catch exceptions from threadpool
     for v, t in types:
-        futures.append(tpool.submit(extract_type, t, v))
+        futures.append(tpool.submit(__extract_type, t, v))
     for v, p in dependent_props:
-        futures.append(tpool.submit(extract_property, p, v))
+        futures.append(tpool.submit(__extract_property, p, v))
     return types, futures
 
 
-def extract_properties(vid):
+def __extract_properties(vid):
     properties = sch.get_properties(vid)
 
     other_vocabs = filter(lambda x: x != vid, vocs.get_vocabularies())
@@ -169,17 +176,37 @@ def extract_properties(vid):
 
     futures = []
     for p in properties:
-        futures.append(tpool.submit(extract_property, p, vid))
+        futures.append(tpool.submit(__extract_property, p, vid))
     for v, ty in dependent_types:
-        futures.append(tpool.submit(extract_type, ty, v))
+        futures.append(tpool.submit(__extract_type, ty, v))
     return properties, futures
 
 
-def __get_vocab_set(pattern, vid=None):
-    if vid is not None:
-        pattern = pattern.replace(':*:', ':%s:' % vid)
-    all_sets = map(lambda x: r.smembers(x), r.keys(pattern))
-    return list(reduce(set.union, all_sets, set([])))
+def delete_vocabulary(vid):
+    v_types = get_types(vid)
+    if len(v_types):
+        __remove_from_sets(v_types, '*:domain', '*:range', '*:sub', '*:super')
+    v_props = get_properties(vid)
+    if len(v_props):
+        __remove_from_sets(v_props, '*:refs', '*:props')
+    try:
+        v_keys = r.keys('vocabs:{}:*'.format(vid))
+        if len(v_keys):
+            r.delete(*v_keys)
+    except RedisError as e:
+        raise FountainError(e.message)
+
+
+def extract_vocabulary(vid):
+    log.info('Extracting vocabulary {}...'.format(vid))
+    delete_vocabulary(vid)
+    start_time = dt.now()
+    types, t_futures = __extract_types(vid)
+    properties, p_futures = __extract_properties(vid)
+    for f in t_futures + p_futures:
+        f.result()
+    log.info('Done (in {}ms)'.format((dt.now() - start_time).total_seconds() * 1000))
+    return types, properties
 
 
 def get_types(vid=None):
@@ -190,30 +217,16 @@ def get_properties(vid=None):
     return __get_vocab_set('vocabs:*:properties', vid)
 
 
-def get_seeds():
-    def iterator():
-        seed_types = r.keys('seeds:*')
-        for st in seed_types:
-            for seed in list(r.smembers(st)):
-                yield base64.b64decode(seed)
-
-    return list(iterator())
-
-
-def get_type_seeds(ty):
-    return [base64.b64decode(seed) for seed in list(r.smembers('seeds:{}'.format(ty)))]
-
-
 def get_property(prop):
     def get_inverse_domain(ip):
-        return reduce(set.union, get_by_pattern('*:properties:{}:domain'.format(ip), r.smembers), set([]))
+        return reduce(set.union, __get_by_pattern('*:properties:{}:domain'.format(ip), r.smembers), set([]))
 
     def get_inverse_range(ip):
-        return reduce(set.union, get_by_pattern('*:properties:{}:range'.format(ip), r.smembers), set([]))
+        return reduce(set.union, __get_by_pattern('*:properties:{}:range'.format(ip), r.smembers), set([]))
 
-    domain = reduce(set.union, get_by_pattern('*:properties:{}:domain'.format(prop), r.smembers), set([]))
-    rang = reduce(set.union, get_by_pattern('*:properties:{}:range'.format(prop), r.smembers), set([]))
-    inv = reduce(set.union, get_by_pattern('*:properties:{}:inverse'.format(prop), r.smembers), set([]))
+    domain = reduce(set.union, __get_by_pattern('*:properties:{}:domain'.format(prop), r.smembers), set([]))
+    rang = reduce(set.union, __get_by_pattern('*:properties:{}:range'.format(prop), r.smembers), set([]))
+    inv = reduce(set.union, __get_by_pattern('*:properties:{}:inverse'.format(prop), r.smembers), set([]))
 
     if len(inv):
         inverse_dr = [(get_inverse_domain(i), get_inverse_range(i)) for i in inv]
@@ -221,7 +234,7 @@ def get_property(prop):
             domain.update(ra)
             rang.update(dom)
 
-    ty = get_by_pattern('*:properties:{}:type'.format(prop), r.get)
+    ty = __get_by_pattern('*:properties:{}:type'.format(prop), r.get)
     try:
         ty = ty.pop()
     except IndexError:
@@ -231,27 +244,29 @@ def get_property(prop):
 
 
 def is_property(prop):
-    return len(r.keys('*:properties:{}:*'.format(prop)))
+    try:
+        return len(r.keys('*:properties:{}:*'.format(prop)))
+    except RedisError as e:
+        raise FountainError(e.message)
 
 
 def is_type(ty):
-    return len(r.keys('*:types:{}:*'.format(ty)))
+    try:
+        return len(r.keys('*:types:{}:*'.format(ty)))
+    except RedisError as e:
+        raise FountainError(e.message)
 
 
 def get_type(ty):
-    super_types = reduce(set.union, get_by_pattern('*:types:{}:super'.format(ty), r.smembers), set([]))
-    sub_types = reduce(set.union, get_by_pattern('*:types:{}:sub'.format(ty), r.smembers), set([]))
-    type_props = reduce(set.union, get_by_pattern('*:types:{}:props'.format(ty), r.smembers), set([]))
-    type_refs = reduce(set.union, get_by_pattern('*:types:{}:refs'.format(ty), r.smembers), set([]))
+    try:
+        super_types = reduce(set.union, __get_by_pattern('*:types:{}:super'.format(ty), r.smembers), set([]))
+        sub_types = reduce(set.union, __get_by_pattern('*:types:{}:sub'.format(ty), r.smembers), set([]))
+        type_props = reduce(set.union, __get_by_pattern('*:types:{}:props'.format(ty), r.smembers), set([]))
+        type_refs = reduce(set.union, __get_by_pattern('*:types:{}:refs'.format(ty), r.smembers), set([]))
 
-    return {'super': list(super_types),
-            'sub': list(sub_types),
-            'properties': list(type_props),
-            'refs': list(type_refs)}
-
-
-def add_seed(uri, ty):
-    type_keys = r.keys('*:types')
-    for tk in type_keys:
-        if r.sismember(tk, ty):
-            r.sadd('seeds:{}'.format(ty), base64.b64encode(uri))
+        return {'super': list(super_types),
+                'sub': list(sub_types),
+                'properties': list(type_props),
+                'refs': list(type_refs)}
+    except RedisError as e:
+        raise FountainError(e.message)

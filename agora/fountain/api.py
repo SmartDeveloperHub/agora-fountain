@@ -27,6 +27,7 @@ __author__ = 'Fernando Serena'
 from flask import make_response, request, jsonify, render_template
 from agora.fountain.vocab.schema import prefixes
 import agora.fountain.index.core as index
+import agora.fountain.index.seeds as seeds
 from agora.fountain.index.paths import calculate_paths, pgraph
 import agora.fountain.vocab.onto as vocs
 from agora.fountain.server import app
@@ -220,7 +221,7 @@ def get_seeds():
     Return the complete list of seeds available
     :return:
     """
-    return jsonify({"seeds": index.get_seeds()})
+    return jsonify({"seeds": seeds.get_seeds()})
 
 
 @app.route('/seeds/<string:ty>')
@@ -230,7 +231,7 @@ def get_type_seeds(ty):
     :param ty: prefixed required type e.g. foaf:Person
     :return:
     """
-    return jsonify({"seeds": index.get_type_seeds(ty)})
+    return jsonify({"seeds": seeds.get_type_seeds(ty)})
 
 
 @app.route('/seeds', methods=['POST'])
@@ -241,7 +242,7 @@ def add_seed():
     :return:
     """
     data = request.json
-    index.add_seed(data.get('uri', None), data.get('type', None))
+    seeds.add_seed(data.get('uri', None), data.get('type', None))
     response = make_response()
     response.status_code = 201
     return response
@@ -258,7 +259,7 @@ def __get_path(elm):
     for score, path in paths:
         for i, step in enumerate(path):
             ty = step.get('type')
-            type_seeds = index.get_type_seeds(ty)
+            type_seeds = seeds.get_type_seeds(ty)
             if len(type_seeds):
                 cycles = [int(c) for c in index.r.smembers('cycles:{}'.format(elm))]
                 all_cycles = all_cycles.union(set(cycles))
@@ -267,7 +268,7 @@ def __get_path(elm):
                     seed_paths.append(sub_path)
 
     # It only returns seeds if elm is a type and there are seeds of it
-    req_type_seeds = index.get_type_seeds(elm)
+    req_type_seeds = seeds.get_type_seeds(elm)
     if len(req_type_seeds):
         seed_paths.append({'seeds': req_type_seeds, 'steps': []})
 
@@ -362,7 +363,7 @@ def show_graph():
     for (nid, data) in pgraph.nodes(data=True):
         if data.get('ty') == 'type':
             types.append(nid)
-            has_seeds = len(index.get_type_seeds(nid))
+            has_seeds = len(seeds.get_type_seeds(nid))
             node_d = {'data': {'id': nodes_dict[nid], 'label': nid, 'shape': 'roundrectangle',
                                'width': len(nid) * 10}}
             if has_seeds:
