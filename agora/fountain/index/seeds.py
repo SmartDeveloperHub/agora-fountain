@@ -33,6 +33,8 @@ class TypeNotAvailableError(Exception):
 
 
 def add_seed(uri, ty):
+    from rfc3987 import parse
+    parse(uri, rule='URI')
     type_found = False
     type_keys = r.keys('*:types')
     for tk in type_keys:

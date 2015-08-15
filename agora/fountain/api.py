@@ -246,7 +246,7 @@ def add_seed():
         seeds.add_seed(data.get('uri', None), data.get('type', None))
         response = make_response()
         response.status_code = 201
-    except seeds.TypeNotAvailableError as e:
+    except (seeds.TypeNotAvailableError, ValueError) as e:
         response = make_response(e.message)
         response.status_code = 400
     return response

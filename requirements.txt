@@ -6,3 +6,4 @@ rdflib==4.2.0
 APScheduler
 networkx
 futures
+rfc3987
