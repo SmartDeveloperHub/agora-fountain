@@ -242,9 +242,13 @@ def add_seed():
     :return:
     """
     data = request.json
-    seeds.add_seed(data.get('uri', None), data.get('type', None))
-    response = make_response()
-    response.status_code = 201
+    try:
+        seeds.add_seed(data.get('uri', None), data.get('type', None))
+        response = make_response()
+        response.status_code = 201
+    except seeds.TypeNotAvailableError as e:
+        response = make_response(e.message)
+        response.status_code = 400
     return response
 
 

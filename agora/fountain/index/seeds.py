@@ -28,11 +28,20 @@ from agora.fountain.index.core import r
 import base64
 
 
+class TypeNotAvailableError(Exception):
+    pass
+
+
 def add_seed(uri, ty):
+    type_found = False
     type_keys = r.keys('*:types')
     for tk in type_keys:
         if r.sismember(tk, ty):
             r.sadd('seeds:{}'.format(ty), base64.b64encode(uri))
+            type_found = True
+
+    if not type_found:
+        raise TypeNotAvailableError("{} is not a valid type".format(ty))
 
 
 def get_seeds():
