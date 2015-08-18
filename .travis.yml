@@ -13,6 +13,5 @@ script: nosetests -v --with-coverage --cover-package=agora
 branches:
   only:
     - master
-    - travis
 after_success:
   coveralls

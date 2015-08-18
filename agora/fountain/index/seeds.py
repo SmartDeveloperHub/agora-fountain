@@ -32,6 +32,14 @@ class TypeNotAvailableError(Exception):
     pass
 
 
+class DuplicateSeedError(Exception):
+    pass
+
+
+class InvalidSeedError(Exception):
+    pass
+
+
 def add_seed(uri, ty):
     from rfc3987 import parse
     parse(uri, rule='URI')
@@ -39,11 +47,38 @@ def add_seed(uri, ty):
     type_keys = r.keys('*:types')
     for tk in type_keys:
         if r.sismember(tk, ty):
-            r.sadd('seeds:{}'.format(ty), base64.b64encode(uri))
             type_found = True
+            encoded_uri = base64.b64encode(uri)
+            if r.sismember('seeds:{}'.format(ty), encoded_uri):
+                raise DuplicateSeedError('{} is already registered as a seed of type {}'.format(uri, ty))
+            r.sadd('seeds:{}'.format(ty), base64.b64encode(uri))
 
     if not type_found:
         raise TypeNotAvailableError("{} is not a valid type".format(ty))
+
+    return base64.b64encode('{}|{}'.format(ty, uri))
+
+
+def get_seed(sid):
+    try:
+        ty, uri = base64.b64decode(sid).split('|')
+        if r.sismember('seeds:{}'.format(ty), base64.b64encode(uri)):
+            return {'type': ty, 'uri': uri}
+    except TypeError as e:
+        raise InvalidSeedError(e.message)
+
+    raise InvalidSeedError(sid)
+
+
+def delete_seed(sid):
+    try:
+        ty, uri = base64.b64decode(sid).split('|')
+        set_key = 'seeds:{}'.format(ty)
+        encoded_uri = base64.b64encode(uri)
+        if not r.srem(set_key, encoded_uri):
+            raise InvalidSeedError(sid)
+    except TypeError as e:
+        raise InvalidSeedError(e.message)
 
 
 def get_seeds():
@@ -57,4 +92,14 @@ def get_seeds():
 
 
 def get_type_seeds(ty):
+    type_keys = r.keys('*:types')
+    type_found = False
+    for tk in type_keys:
+        if r.sismember(tk, ty):
+            type_found = True
+            break
+
+    if not type_found:
+        raise TypeNotAvailableError(ty)
+
     return [base64.b64decode(seed) for seed in list(r.smembers('seeds:{}'.format(ty)))]

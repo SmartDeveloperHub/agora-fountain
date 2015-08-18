@@ -24,14 +24,14 @@
 
 __author__ = 'Fernando Serena'
 
-from flask import make_response, request, jsonify, render_template
+from flask import make_response, request, jsonify, render_template, url_for
 from agora.fountain.vocab.schema import prefixes
 import agora.fountain.index.core as index
 import agora.fountain.index.seeds as seeds
 from agora.fountain.index.paths import calculate_paths, pgraph
 import agora.fountain.vocab.onto as vocs
 from agora.fountain.server import app
-from flask_negotiate import consumes
+from flask_negotiate import consumes, produces
 import json
 import itertools
 import base64
@@ -231,7 +231,12 @@ def get_type_seeds(ty):
     :param ty: prefixed required type e.g. foaf:Person
     :return:
     """
-    return jsonify({"seeds": seeds.get_type_seeds(ty)})
+    try:
+        return jsonify({"seeds": seeds.get_type_seeds(ty)})
+    except seeds.TypeNotAvailableError as e:
+        response = make_response(e.message)
+        response.status_code = 404
+        return response
 
 
 @app.route('/seeds', methods=['POST'])
@@ -243,13 +248,47 @@ def add_seed():
     """
     data = request.json
     try:
-        seeds.add_seed(data.get('uri', None), data.get('type', None))
-        response = make_response()
+        sid = seeds.add_seed(data.get('uri', None), data.get('type', None))
+        response = make_response(sid)
+        response.headers['Location'] = url_for('get_seed', sid=sid, _external=True)
         response.status_code = 201
     except (seeds.TypeNotAvailableError, ValueError) as e:
         response = make_response(e.message)
         response.status_code = 400
+    except seeds.DuplicateSeedError as e:
+        response = make_response(e.message)
+        response.status_code = 409
     return response
+
+
+@app.route('/seeds/id/<sid>')
+def get_seed(sid):
+    """
+    Get the known information about a specific seed by id
+    :return:
+    """
+    try:
+        seed = seeds.get_seed(sid)
+        return jsonify(seed)
+    except seeds.InvalidSeedError:
+        response = make_response()
+        response.status_code = 404
+        return response
+
+
+@app.route('/seeds/id/<sid>', methods=['DELETE'])
+def delete_seed(sid):
+    """
+    Delete a specific seed by id
+    :return:
+    """
+    try:
+        seeds.delete_seed(sid)
+        return make_response()
+    except seeds.InvalidSeedError:
+        response = make_response()
+        response.status_code = 404
+        return response
 
 
 def __get_path(elm):
