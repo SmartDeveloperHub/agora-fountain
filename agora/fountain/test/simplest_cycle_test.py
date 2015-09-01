@@ -35,13 +35,13 @@ class SimplestCycleTest(FountainTest):
         eq_(len(vocabs), False, 'Fountain should be empty')
 
     def b_test_post_vocab(self):
-        with open('agora/fountain/test/vocabs/dummy.ttl') as f:
-            dummy_vocab = f.read()
-            self.post('/vocabs', dummy_vocab, message='The vocabulary was not created properly')
+        with open('agora/fountain/test/vocabs/simplest_cycle.ttl') as f:
+            vocab = f.read()
+            self.post('/vocabs', vocab, message='The vocabulary was not created properly')
 
     def c_test_contains_vocab(self):
         vocabs = json.loads(self.get('/vocabs'))
-        eq_(len(vocabs), 1, 'Fountain should contain the dummy vocab')
+        eq_(len(vocabs), 1, 'Fountain should contain the simplest cycle vocabulary')
         assert 'test' in vocabs, 'The prefix of the contained vocabulary must be "test"'
         vocab = self.get('/vocabs/test')
         assert len(vocab), 'RDF must not be empty'
