@@ -120,6 +120,16 @@ class SimplestCycleTest(FountainTest):
         c1_path_seed = c1_path['seeds'].pop()
         eq_(c1_path_seed, SimplestCycleTest.SEED_URI, 'Someone has changed it maliciously...')
 
+    def c5_test_paths_to_seedless_concept(self):
+        c2_paths = json.loads(self.get('paths/test:Concept2'))
+        c2_paths_list = c2_paths["paths"]
+        eq_(len(c2_paths_list), 1, 'Only one path was expected')
+        c2_path = c2_paths_list.pop()
+        eq_(len(c2_path['steps']), 1, 'Steps list must have length 1')
+        eq_(len(c2_path['seeds']), 1, 'test:Concept1 seed was expected')
+        c2_path_seed = c2_path['seeds'].pop()
+        eq_(c2_path_seed, SimplestCycleTest.SEED_URI, 'Someone has changed it maliciously...')
+
     def d_test_delete_vocab(self):
         self.delete('/vocabs/test', 'The test vocabulary should exist previously')
         vocabs = json.loads(self.get('/vocabs'))
