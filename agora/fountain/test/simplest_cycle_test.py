@@ -30,6 +30,8 @@ from nose.tools import *
 
 
 class SimplestCycleTest(FountainTest):
+    SEED_URI = "http://localhost/seed"
+
     def a_test_empty_vocabs(self):
         vocabs = json.loads(self.get('/vocabs'))
         eq_(len(vocabs), False, 'Fountain should be empty')
@@ -103,10 +105,12 @@ class SimplestCycleTest(FountainTest):
         eq_(len(c1_paths["paths"]), False, 'Impossible...No seeds, no paths')
 
     def c3_test_paths_with_self_seed(self):
-        seed_uri = "http://localhost/seed"
-        self.post('/seeds', json.dumps({"uri": seed_uri, "type": "test:Concept1"}), content_type='application/json')
+        self.post('/seeds', json.dumps({"uri": SimplestCycleTest.SEED_URI, "type": "test:Concept1"}),
+                  content_type='application/json')
         seeds = json.loads(self.get('/seeds'))["seeds"]
-        assert len(seeds) == 1 and seed_uri in seeds, '%s should be the only seed available'
+        assert len(seeds) == 1 and SimplestCycleTest.SEED_URI in seeds, '%s should be the only seed available'
+
+    def c4_test_paths_with_self_seed(self):
         c1_paths = json.loads(self.get('paths/test:Concept1'))
         c1_paths_list = c1_paths["paths"]
         eq_(len(c1_paths_list), 1, 'Only one path was expected')
@@ -114,7 +118,7 @@ class SimplestCycleTest(FountainTest):
         eq_(len(c1_path['steps']), 0, 'Steps list should be empty')
         eq_(len(c1_path['seeds']), 1, 'test:Concept1 seed was expected')
         c1_path_seed = c1_path['seeds'].pop()
-        eq_(c1_path_seed, seed_uri, 'Someone has changed it maliciously...')
+        eq_(c1_path_seed, SimplestCycleTest.SEED_URI, 'Someone has changed it maliciously...')
 
     def d_test_delete_vocab(self):
         self.delete('/vocabs/test', 'The test vocabulary should exist previously')
