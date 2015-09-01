@@ -292,31 +292,38 @@ def delete_seed(sid):
 
 
 def __get_path(elm):
+    def identify_seed_cycles(_seeds):
+        cycles = [int(c) for c in index.r.smembers('cycles:{}'.format(elm))]
+        sub_path = {'cycles': cycles, 'seeds': _seeds, 'steps': list(reversed(path[:i + 1]))}
+        if not (sub_path in seed_paths):
+            seed_paths.append(sub_path)
+        return cycles
+
     paths = []
     seed_paths = []
     for path, score in index.r.zrange('paths:{}'.format(elm), 0, -1, withscores=True):
         paths.append((int(score), eval(path)))
 
-    all_cycles = set([])
+    applying_cycles = set([])
 
     for score, path in paths:
         for i, step in enumerate(path):
             ty = step.get('type')
             type_seeds = seeds.get_type_seeds(ty)
             if len(type_seeds):
-                cycles = [int(c) for c in index.r.smembers('cycles:{}'.format(elm))]
-                all_cycles = all_cycles.union(set(cycles))
-                sub_path = {'cycles': cycles, 'seeds': type_seeds, 'steps': list(reversed(path[:i + 1]))}
-                if not (sub_path in seed_paths):
-                    seed_paths.append(sub_path)
+                seed_cycles = identify_seed_cycles(type_seeds)
+                applying_cycles = applying_cycles.union(set(seed_cycles))
 
     # It only returns seeds if elm is a type and there are seeds of it
     req_type_seeds = seeds.get_type_seeds(elm)
     if len(req_type_seeds):
-        seed_paths.append({'seeds': req_type_seeds, 'steps': []})
+        path = []
+        seed_cycles = identify_seed_cycles(req_type_seeds)
+        applying_cycles = applying_cycles.union(set(seed_cycles))
 
-    all_cycles = [{'cycle': int(cid), 'steps': eval(index.r.zrange('cycles', cid, cid).pop())} for cid in all_cycles]
-    return list(seed_paths), all_cycles
+    applying_cycles = [{'cycle': int(cid), 'steps': eval(index.r.zrange('cycles', cid, cid).pop())} for cid in
+                       applying_cycles]
+    return list(seed_paths), applying_cycles
 
 
 def __graph_path(elm, paths, cycles):
