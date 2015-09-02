@@ -81,14 +81,24 @@ def delete_seed(sid):
         raise InvalidSeedError(e.message)
 
 
+def delete_type_seeds(ty):
+    r.delete('seeds:{}'.format(ty))
+
+
 def get_seeds():
     def iterator():
         seed_types = r.keys('seeds:*')
         for st in seed_types:
+            ty = st.replace('seeds:', '')
             for seed in list(r.smembers(st)):
-                yield base64.b64decode(seed)
+                yield ty, base64.b64decode(seed)
 
-    return list(iterator())
+    import collections
+
+    result_dict = collections.defaultdict(list)
+    for t, uri in iterator():
+        result_dict[t].append(uri)
+    return result_dict
 
 
 def get_type_seeds(ty):

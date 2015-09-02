@@ -43,5 +43,9 @@ class SeedCRDTest(FountainTest):
         vocab_uri = self.post_vocabulary('simplest_cycle')
         self.post_seed("test:Concept1", self.seed_uri)
         seeds = self.get_seeds()
-        assert len(seeds) == 1 and self.seed_uri in seeds, '%s should be the only seed available'
+        assert 'test:Concept1' in seeds, '%s should be the only seed type'
+        c1_seeds = seeds['test:Concept1']
+        assert len(c1_seeds) == 1 and self.seed_uri in c1_seeds, '%s should be the only seed available' % self.seed_uri
         self.delete_vocabulary(vocab_uri)
+        seeds = self.get_seeds()
+        eq_(len(seeds), 0, 'No seed should be kept')
