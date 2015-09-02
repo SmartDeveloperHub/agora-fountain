@@ -30,22 +30,17 @@ from nose.tools import *
 
 
 class SimplestCycleTest(FountainTest):
-    SEED_URI = "http://localhost/seed"
+    seed_uri = "http://localhost/seed"
 
     def a_test_empty_vocabs(self):
-        vocabs = json.loads(self.get('/vocabs'))
-        eq_(len(vocabs), False, 'Fountain should be empty')
+        eq_(len(self.get_vocabularies()), False, 'Fountain should be empty')
 
     def b_test_post_vocab(self):
-        with open('agora/fountain/test/vocabs/simplest_cycle.ttl') as f:
-            vocab = f.read()
-            self.post('/vocabs', vocab, message='The vocabulary was not created properly')
-
-    def c_test_contains_vocab(self):
-        vocabs = json.loads(self.get('/vocabs'))
+        vocab_uri = self.post_vocabulary('simplest_cycle')
+        vocabs = self.get_vocabularies()
         eq_(len(vocabs), 1, 'Fountain should contain the simplest cycle vocabulary')
         assert 'test' in vocabs, 'The prefix of the contained vocabulary must be "test"'
-        vocab = self.get('/vocabs/test')
+        vocab = self.get_vocabulary(vocab_uri)
         assert len(vocab), 'RDF must not be empty'
 
     def c1_test_properties(self):
@@ -75,7 +70,7 @@ class SimplestCycleTest(FountainTest):
         p2_inverse = graph.get_inverse_property('test:prop2')
         eq_(p2_inverse, 'test:prop1', 'test:prop1 is the inverse of test:prop2')
 
-    def c1_test_types(self):
+    def c2_test_types(self):
         graph = self.graph
         types = sorted(graph.types)
         eq_(len(types), 2, 'Fountain should contain two types, but found: %s' % len(types))
@@ -98,49 +93,40 @@ class SimplestCycleTest(FountainTest):
         eq_(len(c2_refs), 1, 'Concept2 must have 1 reference')
         assert 'test:prop1' in c2_refs
 
-    def c2_test_paths_no_seeds(self):
-        seeds = json.loads(self.get('/seeds'))["seeds"]
+    def c3_test_paths_no_seeds(self):
+        seeds = self.get_seeds()
         eq_(len(seeds), False, 'There should not be any seed available')
-        c1_paths = json.loads(self.get('paths/test:Concept1'))
-        eq_(len(c1_paths["paths"]), False, 'Impossible...No seeds, no paths')
+        c1_paths = self.get_paths("test:Concept1")
+        eq_(len(c1_paths), False, 'Impossible...No seeds, no paths')
 
-    def c3_test_paths_with_self_seed(self):
-        self.post('/seeds', json.dumps({"uri": SimplestCycleTest.SEED_URI, "type": "test:Concept1"}),
-                  content_type='application/json')
-        seeds = json.loads(self.get('/seeds'))["seeds"]
-        assert len(seeds) == 1 and SimplestCycleTest.SEED_URI in seeds, '%s should be the only seed available'
-
-    def c4_test_paths_with_self_seed(self):
-        c1_paths = json.loads(self.get('paths/test:Concept1'))
-        c1_paths_list = c1_paths["paths"]
-        eq_(len(c1_paths_list), 1, 'Only one path was expected')
-        c1_path = c1_paths_list.pop()
+    def c4_test_path_with_self_seed(self):
+        self.post_seed("test:Concept1", self.seed_uri)
+        c1_paths = self.get_paths("test:Concept1")
+        eq_(len(c1_paths), 1, 'Only one path was expected')
+        c1_path = c1_paths.pop()
         eq_(len(c1_path['steps']), 0, 'Steps list should be empty')
         eq_(len(c1_path['seeds']), 1, 'test:Concept1 seed was expected')
         c1_path_seed = c1_path['seeds'].pop()
-        eq_(c1_path_seed, SimplestCycleTest.SEED_URI, 'Someone has changed it maliciously...')
+        eq_(c1_path_seed, self.seed_uri, 'Someone has changed it maliciously...')
         c1_cycles = c1_path['cycles']
         eq_(len(c1_cycles), 1, 'test:Concept1 should belong to a cycle')
         eq_(c1_cycles.pop(), 0, 'test:Concept1 should belong to the cycle 0')
 
-    def c5_test_paths_to_seedless_concept(self):
-        c2_paths = json.loads(self.get('paths/test:Concept2'))
-        c2_paths_list = c2_paths["paths"]
-        eq_(len(c2_paths_list), 1, 'Only one path was expected')
-        c2_path = c2_paths_list.pop()
+    def c5_test_path_to_seedless_concept(self):
+        c2_paths = self.get_paths('test:Concept2')
+        eq_(len(c2_paths), 1, 'Only one path was expected')
+        c2_path = c2_paths.pop()
         eq_(len(c2_path['steps']), 1, 'Steps list must have length 1')
         eq_(len(c2_path['seeds']), 1, 'test:Concept1 seed was expected')
         c2_path_seed = c2_path['seeds'].pop()
-        eq_(c2_path_seed, SimplestCycleTest.SEED_URI, 'Someone has changed it maliciously...')
+        eq_(c2_path_seed, self.seed_uri, 'Someone has changed it maliciously...')
         c2_cycles = c2_path['cycles']
         eq_(len(c2_cycles), 1, 'test:Concept2 should belong to a cycle')
         eq_(c2_cycles.pop(), 0, 'test:Concept2 should belong to the cycle 0')
 
     def d_test_delete_vocab(self):
-        self.delete('/vocabs/test', 'The test vocabulary should exist previously')
-        vocabs = json.loads(self.get('/vocabs'))
+        self.delete_vocabulary('/vocabs/test')
+        vocabs = self.get_vocabularies()
         eq_(len(vocabs), False, 'Fountain should be empty again')
-        types = json.loads(self.get('/types'))["types"]
-        eq_(len(types), False, 'There should not be any type available')
-        props = json.loads(self.get('/properties'))["properties"]
-        eq_(len(props), False, 'There should not be any property available')
+        eq_(len(self.types), False, 'There should not be any type available')
+        eq_(len(self.properties), False, 'There should not be any property available')
