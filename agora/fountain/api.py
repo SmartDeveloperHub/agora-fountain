@@ -119,7 +119,7 @@ def add_vocabulary():
 
     response = make_response()
     response.status_code = 201
-    response.headers['Location'] = vid
+    response.headers['Location'] = url_for('get_vocabulary', vid=vid, _external=True)
     return response
 
 
@@ -348,7 +348,8 @@ def __graph_path(elm, paths, cycles):
             nodes.append(node_d)
             if last_node is not None and (last_node, last_prop, ty) not in mem_edges:
                 edges.append(
-                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node), 'label': last_prop + '\n\n\n',
+                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
+                              'label': last_prop + '\n\n\n',
                               'target': base64.b16encode(ty)}})
                 mem_edges.add((last_node, last_prop, ty))
             last_node = ty
@@ -359,7 +360,8 @@ def __graph_path(elm, paths, cycles):
                                    'width': len(elm) * 10}, 'classes': 'end'})
             if (last_node, last_prop, elm) not in mem_edges:
                 edges.append(
-                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node), 'label': last_prop + '\n\n\n',
+                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
+                              'label': last_prop + '\n\n\n',
                               'target': base64.b16encode(elm)}})
                 mem_edges.add((last_node, last_prop, elm))
         else:
@@ -376,7 +378,8 @@ def __graph_path(elm, paths, cycles):
                                        'width': len(elm) * 10}})
                 if (last_node, elm, r) not in mem_edges:
                     edges.append(
-                        {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node), 'label': elm + '\n\n',
+                        {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
+                                  'label': elm + '\n\n',
                                   'target': base64.b16encode(r)}, 'classes': 'end'})
                     mem_edges.add((last_node, elm, r))
 
@@ -441,8 +444,9 @@ def show_graph():
                 for i, (s, t) in enumerate(dp_edges):
                     rid = 'n{}'.format(len(nodes_dict) + len(nodes))
                     nodes.append({'data': {'id': rid, 'label': t, 'width': len(t) * 10, 'shape': 'ellipse'}})
-                    edges.append({'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid + '\n\n',
-                                           'target': rid}})
+                    edges.append(
+                        {'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid + '\n\n',
+                                  'target': rid}})
                 ibase += len(dp_edges) + 1
 
     for t in types:
