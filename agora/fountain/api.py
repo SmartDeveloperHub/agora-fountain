@@ -101,6 +101,14 @@ def analyse_vocabulary(vid):
     calculate_paths()
 
 
+def check_seeds():
+    seed_dict = seeds.get_seeds()
+    types = index.get_types()
+    obsolete_types = set.difference(set(seed_dict.keys()), set(types))
+    for t in obsolete_types:
+        seeds.delete_type_seeds(t)
+
+
 @app.route('/vocabs', methods=['POST'])
 @consumes('text/turtle')
 def add_vocabulary():
@@ -140,6 +148,7 @@ def update_vocabulary(vid):
         raise APIError(e.message)
 
     analyse_vocabulary(vid)
+    check_seeds()
 
     response = make_response()
     response.status_code = 200
@@ -160,6 +169,7 @@ def delete_vocabulary(vid):
         raise NotFound(e.message)
 
     analyse_vocabulary(vid)
+    check_seeds()
 
     response = make_response()
     response.status_code = 200
