@@ -30,6 +30,7 @@ from nose.tools import *
 import networkx as nx
 import json
 from functools import wraps
+from urlparse import urlparse
 
 
 def setup():
@@ -65,6 +66,7 @@ class AgoraGraph(nx.DiGraph):
                         return f(name)
                     raise Exception(ty)
             raise KeyError(ty)
+
         return wrapper
 
     def get_type_properties(self, ty):
@@ -89,11 +91,48 @@ class AgoraGraph(nx.DiGraph):
 
 
 class FountainTest(unittest.TestCase):
+    @classmethod
+    def tearDownClass(cls):
+        from agora.fountain.index.core import r
+        r.flushdb()
+
     def setUp(self):
         self.app = app.test_client()
 
-    def tearDown(self):
-        pass
+    def get_vocabularies(self):
+        return json.loads(self.get('/vocabs'))
+
+    def get_vocabulary(self, uri):
+        path = urlparse(uri).path
+        return self.get(path)
+
+    def post_vocabulary(self, filename, exp_code=201):
+        with open('agora/fountain/test/vocabs/{}.ttl'.format(filename)) as f:
+            vocab = f.read()
+            response = self.post('/vocabs', vocab, message='The vocabulary was not created properly', exp_code=exp_code)
+            if exp_code != 201:
+                return None
+            return response.headers.get('Location', None)
+
+    def delete_vocabulary(self, uri):
+        path = urlparse(uri).path
+        self.delete(path, 'The test vocabulary should exist previously')
+
+    def post_seed(self, ty, uri, exp_code=201):
+        response = self.post('/seeds', json.dumps({"uri": uri, "type": ty}),
+                             content_type='application/json', exp_code=exp_code)
+
+        return response.headers.get('Location', None)
+
+    def delete_seed(self, uri):
+        path = urlparse(uri).path
+        self.delete(path, 'That seed should exist previously')
+
+    def get_seeds(self):
+        return json.loads(self.get('/seeds'))["seeds"]
+
+    def get_paths(self, node):
+        return json.loads(self.get('paths/{}'.format(node)))["paths"]
 
     def get(self, path, exp_code=200, error_message=None):
         rv = self.app.get(path)
@@ -107,7 +146,7 @@ class FountainTest(unittest.TestCase):
         if message is None:
             message = 'The resource was not created properly'
         eq_(rv.status_code, exp_code, message + ": %s" % rv.status_code)
-        return rv.data
+        return rv
 
     def delete(self, path, error_message=None):
         rv = self.app.delete(path)
