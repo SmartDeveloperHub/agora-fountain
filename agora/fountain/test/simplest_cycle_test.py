@@ -29,21 +29,9 @@ import json
 from nose.tools import *
 
 
-class SimplestCycleTest(FountainTest):
-    seed_uri = "http://localhost/seed"
-
-    def a_test_empty_vocabs(self):
-        eq_(len(self.get_vocabularies()), False, 'Fountain should be empty')
-
-    def b_test_post_vocab(self):
-        vocab_uri = self.post_vocabulary('simplest_cycle')
-        vocabs = self.get_vocabularies()
-        eq_(len(vocabs), 1, 'Fountain should contain the simplest cycle vocabulary')
-        assert 'test' in vocabs, 'The prefix of the contained vocabulary must be "test"'
-        vocab = self.get_vocabulary(vocab_uri)
-        assert len(vocab), 'RDF must not be empty'
-
-    def c1_test_properties(self):
+class SimplestCycleGraphTest(FountainTest):
+    def test_properties(self):
+        self.post_vocabulary('simplest_cycle')
         graph = self.graph
         props = sorted(graph.properties)
         eq_(len(props), 2, 'Fountain should contain two properties, but found: %s' % len(props))
@@ -70,7 +58,7 @@ class SimplestCycleTest(FountainTest):
         p2_inverse = graph.get_inverse_property('test:prop2')
         eq_(p2_inverse, 'test:prop1', 'test:prop1 is the inverse of test:prop2')
 
-    def c2_test_types(self):
+    def test_types(self):
         graph = self.graph
         types = sorted(graph.types)
         eq_(len(types), 2, 'Fountain should contain two types, but found: %s' % len(types))
@@ -93,13 +81,18 @@ class SimplestCycleTest(FountainTest):
         eq_(len(c2_refs), 1, 'Concept2 must have 1 reference')
         assert 'test:prop1' in c2_refs
 
-    def c3_test_paths_no_seeds(self):
+
+class SimplestCyclePathsTest(FountainTest):
+    seed_uri = "http://localhost/seed"
+
+    def a_test_seedless_paths(self):
+        self.post_vocabulary('simplest_cycle')
         seeds = self.get_seeds()
         eq_(len(seeds), False, 'There should not be any seed available')
         c1_paths = self.get_paths("test:Concept1")
         eq_(len(c1_paths), False, 'Impossible...No seeds, no paths')
 
-    def c4_test_path_with_self_seed(self):
+    def b_test_path_with_self_seed(self):
         self.post_seed("test:Concept1", self.seed_uri)
         c1_paths = self.get_paths("test:Concept1")
         eq_(len(c1_paths), 1, 'Only one path was expected')
@@ -112,7 +105,7 @@ class SimplestCycleTest(FountainTest):
         eq_(len(c1_cycles), 1, 'test:Concept1 should belong to a cycle')
         eq_(c1_cycles.pop(), 0, 'test:Concept1 should belong to the cycle 0')
 
-    def c5_test_path_to_seedless_concept(self):
+    def c_test_path_to_seedless_concept(self):
         c2_paths = self.get_paths('test:Concept2')
         eq_(len(c2_paths), 1, 'Only one path was expected')
         c2_path = c2_paths.pop()
@@ -124,9 +117,3 @@ class SimplestCycleTest(FountainTest):
         eq_(len(c2_cycles), 1, 'test:Concept2 should belong to a cycle')
         eq_(c2_cycles.pop(), 0, 'test:Concept2 should belong to the cycle 0')
 
-    def d_test_delete_vocab(self):
-        self.delete_vocabulary('/vocabs/test')
-        vocabs = self.get_vocabularies()
-        eq_(len(vocabs), False, 'Fountain should be empty again')
-        eq_(len(self.types), False, 'There should not be any type available')
-        eq_(len(self.properties), False, 'There should not be any property available')
