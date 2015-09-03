@@ -13,5 +13,6 @@ script: nosetests -v --with-coverage --cover-package=agora
 branches:
   only:
     - master
+    - develop
 after_success:
   coveralls
