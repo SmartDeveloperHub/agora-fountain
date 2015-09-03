@@ -77,7 +77,8 @@ def get_vocabularies():
     :return:
     """
     vocabs = vocs.get_vocabularies()
-    response = make_response(json.dumps(vocabs))
+    vocabs = [(x, url_for('get_vocabulary', vid=x, _external=True)) for x in vocabs]
+    response = make_response(json.dumps(dict(vocabs)))
     response.headers['Content-Type'] = 'application/json'
 
     return response
