@@ -25,27 +25,26 @@
 __author__ = 'Fernando Serena'
 
 from agora.fountain.test import FountainTest
-import json
 from nose.tools import *
 
 
-class SeedCRDTest(FountainTest):
-    seed_uri = "http://localhost/seed"
+class EmptyVocabTest(FountainTest):
+    def test_no_vocabs(self):
+        eq_(len(self.get_vocabularies()), False, 'Fountain should be empty')
 
-    def test_no_seeds(self):
-        seeds = self.get_seeds()
-        eq_(len(seeds), False, 'There should not be any seed available')
 
-    def test_post_unknown_seed_type(self):
-        self.post_seed("test:Concept1", self.seed_uri, exp_code=400)
-
-    def test_post_known_seed_type(self):
+class CreateAndDeleteSingleVocabTest(FountainTest):
+    def test_create_vocab(self):
         vocab_uri = self.post_vocabulary('simplest_cycle')
-        self.post_seed("test:Concept1", self.seed_uri)
-        seeds = self.get_seeds()
-        assert 'test:Concept1' in seeds, '%s should be the only seed type'
-        c1_seeds = seeds['test:Concept1']
-        assert len(c1_seeds) == 1 and self.seed_uri in c1_seeds, '%s should be the only seed available' % self.seed_uri
-        self.delete_vocabulary(vocab_uri)
-        seeds = self.get_seeds()
-        eq_(len(seeds), 0, 'No seed should be kept')
+        vocabs = self.get_vocabularies()
+        eq_(len(vocabs), 1, 'Fountain should contain the simplest cycle vocabulary')
+        assert 'test' in vocabs, 'The prefix of the contained vocabulary must be "test"'
+        vocab = self.get_vocabulary(vocab_uri)
+        assert len(vocab), 'RDF must not be empty'
+
+    def test_delete_vocab(self):
+        self.delete_vocabulary('/vocabs/test')
+        vocabs = self.get_vocabularies()
+        eq_(len(vocabs), False, 'Fountain should be empty again')
+        eq_(len(self.types), False, 'There should not be any type available')
+        eq_(len(self.properties), False, 'There should not be any property available')
