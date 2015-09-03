@@ -30,7 +30,7 @@ from nose.tools import *
 
 
 class SimplestCycleGraphTest(FountainTest):
-    def test_properties(self):
+    def test_graph(self):
         self.post_vocabulary('simplest_cycle')
         graph = self.graph
         props = sorted(graph.properties)
@@ -58,8 +58,6 @@ class SimplestCycleGraphTest(FountainTest):
         p2_inverse = graph.get_inverse_property('test:prop2')
         eq_(p2_inverse, 'test:prop1', 'test:prop1 is the inverse of test:prop2')
 
-    def test_types(self):
-        graph = self.graph
         types = sorted(graph.types)
         eq_(len(types), 2, 'Fountain should contain two types, but found: %s' % len(types))
         assert 'test:Concept1' == types.pop(0)
@@ -82,38 +80,65 @@ class SimplestCycleGraphTest(FountainTest):
         assert 'test:prop1' in c2_refs
 
 
-class SimplestCyclePathsTest(FountainTest):
-    seed_uri = "http://localhost/seed"
+seed_uri = "http://localhost/seed"
 
-    def a_test_seedless_paths(self):
+
+class SimplestCycleSelfSeedPathsTest(FountainTest):
+    def test_self_seed(self):
         self.post_vocabulary('simplest_cycle')
-        seeds = self.seeds
-        eq_(len(seeds), False, 'There should not be any seed available')
-        c1_paths = self.get_paths("test:Concept1")
-        eq_(len(c1_paths), False, 'Impossible...No seeds, no paths')
-
-    def b_test_path_with_self_seed(self):
-        self.post_seed("test:Concept1", self.seed_uri)
+        self.post_seed("test:Concept1", seed_uri)
         c1_paths = self.get_paths("test:Concept1")
         eq_(len(c1_paths), 1, 'Only one path was expected')
         c1_path = c1_paths.pop()
         eq_(len(c1_path['steps']), 0, 'Steps list should be empty')
         eq_(len(c1_path['seeds']), 1, 'test:Concept1 seed was expected')
         c1_path_seed = c1_path['seeds'].pop()
-        eq_(c1_path_seed, self.seed_uri, 'Someone has changed it maliciously...')
+        eq_(c1_path_seed, seed_uri, 'Someone has changed it maliciously...')
         c1_cycles = c1_path['cycles']
         eq_(len(c1_cycles), 1, 'test:Concept1 should belong to a cycle')
         eq_(c1_cycles.pop(), 0, 'test:Concept1 should belong to the cycle 0')
 
-    def c_test_path_to_seedless_concept(self):
+
+class SimplestCycleSeedlessConceptPathsTest(FountainTest):
+    def test_seedless_concept(self):
+        self.post_vocabulary('simplest_cycle')
+        self.post_seed("test:Concept1", seed_uri)
         c2_paths = self.get_paths('test:Concept2')
         eq_(len(c2_paths), 1, 'Only one path was expected')
         c2_path = c2_paths.pop()
         eq_(len(c2_path['steps']), 1, 'Steps list must have length 1')
         eq_(len(c2_path['seeds']), 1, 'test:Concept1 seed was expected')
         c2_path_seed = c2_path['seeds'].pop()
-        eq_(c2_path_seed, self.seed_uri, 'Someone has changed it maliciously...')
+        eq_(c2_path_seed, seed_uri, 'Someone has changed it maliciously...')
         c2_cycles = c2_path['cycles']
         eq_(len(c2_cycles), 1, 'test:Concept2 should belong to a cycle')
         eq_(c2_cycles.pop(), 0, 'test:Concept2 should belong to the cycle 0')
 
+
+class SimplestCycleFullySeededPathsTest(FountainTest):
+    def test_fully_seeded(self):
+
+        def check_seed(s, expected):
+            eq_(s, expected, "%s should be the seed for this path" % expected)
+
+        self.post_vocabulary('simplest_cycle')
+        self.post_seed("test:Concept1", seed_uri)
+        self.post_seed("test:Concept2", seed_uri + '2')
+        c2_paths = self.get_paths('test:Concept2')
+        eq_(len(c2_paths), 2, 'Two paths are expected')
+
+        for path in c2_paths:
+            steps_len = len(path["steps"])
+            seeds = path["seeds"]
+            eq_(len(seeds), 1, "Only one seed is expected")
+            seed = seeds.pop()
+            if steps_len == 1:  # Path with Concept1 seed (candidate)
+                check_seed(seed, seed_uri)
+            elif steps_len == 0:  # Path with Concept2 seed (candidate)
+                check_seed(seed, seed_uri + '2')
+            else:
+                assert False, 'Invalid path with unexpected number of steps'
+
+            cycles = path['cycles']
+            eq_(len(cycles), 1, 'test:Concept2 should belong to a cycle')
+            eq_(cycles.pop(), 0, 'test:Concept2 should belong to the cycle 0')
