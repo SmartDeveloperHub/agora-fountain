@@ -96,6 +96,13 @@ class FountainTest(unittest.TestCase):
         from agora.fountain.index.core import r
         r.flushdb()
 
+        test_client = app.test_client()
+        vocabs = json.loads(test_client.get('/vocabs').data)
+        for v_uri in vocabs.values():
+            rv = test_client.delete(v_uri)
+            eq_(rv.status_code, 200, "The resource couldn't be deleted")
+            return rv.data
+
     def setUp(self):
         self.app = app.test_client()
 
@@ -192,7 +199,3 @@ class FountainTest(unittest.TestCase):
             graph.add_edges_from(edges)
 
         return graph
-
-
-def teardown():
-    pass
