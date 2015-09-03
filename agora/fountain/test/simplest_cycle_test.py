@@ -87,7 +87,7 @@ class SimplestCyclePathsTest(FountainTest):
 
     def a_test_seedless_paths(self):
         self.post_vocabulary('simplest_cycle')
-        seeds = self.get_seeds()
+        seeds = self.seeds
         eq_(len(seeds), False, 'There should not be any seed available')
         c1_paths = self.get_paths("test:Concept1")
         eq_(len(c1_paths), False, 'Impossible...No seeds, no paths')
