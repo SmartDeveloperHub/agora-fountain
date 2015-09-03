@@ -135,7 +135,11 @@ class FountainTest(unittest.TestCase):
         path = urlparse(uri).path
         self.delete(path, 'That seed should exist previously')
 
-    def get_seeds(self):
+    def get_type_seeds(self, ty):
+        return json.loads(self.get('/seeds/{}'.format(ty)))["seeds"]
+
+    @property
+    def seeds(self):
         return json.loads(self.get('/seeds'))["seeds"]
 
     def get_paths(self, node):
