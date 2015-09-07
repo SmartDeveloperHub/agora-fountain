@@ -104,6 +104,7 @@ class FountainTest(unittest.TestCase):
 
     def setUp(self):
         self.app = app.test_client()
+        self._graph = None
 
     def get_vocabularies(self):
         return json.loads(self.get('/vocabs'))
@@ -182,24 +183,54 @@ class FountainTest(unittest.TestCase):
 
     @property
     def graph(self):
-        graph = AgoraGraph()
-        types = self.types
-        graph.add_nodes_from(types, ty='type')
-        for node in self.properties:
-            p_dict = self.get_property(node)
-            dom = p_dict.get('domain')
-            ran = p_dict.get('range')
-            edges = [(d, node) for d in dom]
-            if p_dict.get('type') == 'object':
-                edges.extend([(node, r) for r in ran])
-            graph.add_edges_from(edges)
-            graph.add_node(node, ty='prop', object=p_dict.get('type') == 'object')
-        for node in types:
-            p_dict = self.get_type(node)
-            refs = p_dict.get('refs')
-            props = p_dict.get('properties')
-            edges = [(r, node) for r in refs]
-            edges.extend([(node, p) for p in props])
-            graph.add_edges_from(edges)
+        if self._graph is None:
+            _graph = AgoraGraph()
+            types = self.types
+            _graph.add_nodes_from(types, ty='type')
+            for node in self.properties:
+                p_dict = self.get_property(node)
+                dom = p_dict.get('domain')
+                ran = p_dict.get('range')
+                edges = [(d, node) for d in dom]
+                if p_dict.get('type') == 'object':
+                    edges.extend([(node, r) for r in ran])
+                _graph.add_edges_from(edges)
+                _graph.add_node(node, ty='prop', object=p_dict.get('type') == 'object')
+            for node in types:
+                p_dict = self.get_type(node)
+                refs = p_dict.get('refs')
+                props = p_dict.get('properties')
+                edges = [(r, node) for r in refs]
+                edges.extend([(node, p) for p in props])
+                _graph.add_edges_from(edges)
 
-        return graph
+        return _graph
+
+    def check_property(self, name, domain=None, range=None, inverse=None):
+        def check_edge(p_name, direction, func, expected):
+            actual = func(p_name)
+            if type(expected) is list:
+                eq_(len(actual), len(expected), '{} must have {} {} type'.format(p_name, len(expected), direction))
+                eq_(len(set.difference(set(actual), set(expected))), 0,
+                    'Found wrong %s types: %s' % (direction, actual))
+            elif len(actual):
+                assert 'No %s was expected!' % direction
+
+        check_edge(name, 'domain', self.graph.get_property_domain, domain)
+        check_edge(name, 'range', self.graph.get_property_range, range)
+
+        actual_inverse = self.graph.get_inverse_property(name)
+        eq_(actual_inverse, inverse, 'Expected {} as inverse, but found: {}'.format(inverse, actual_inverse))
+
+    def check_type(self, name, properties=None, refs=None):
+        def check_attribute(p_name, attribute, func, expected):
+            actual = func(p_name)
+            if type(expected) is list:
+                eq_(len(actual), len(expected), '{} must have {} {}'.format(p_name, len(expected), attribute))
+                eq_(len(set.difference(set(actual), set(expected))), 0,
+                    'Found wrong %s: %s' % (attribute, actual))
+            elif len(actual):
+                assert 'No %s was expected!' % attribute
+
+        check_attribute(name, 'properties', self.graph.get_type_properties, properties)
+        check_attribute(name, 'references', self.graph.get_type_refs, refs)
