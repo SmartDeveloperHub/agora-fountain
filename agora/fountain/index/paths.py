@@ -70,7 +70,7 @@ def build_paths(node, root, steps=None):
     if steps is None:
         steps = []
     pred = pgraph.predecessors(node)
-    for t in [x for x in pred if x != root]:
+    for t in [x for x in pred if x != root or not steps]:
         step = {'property': node, 'type': t}
         if step in steps:
             continue
