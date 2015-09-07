@@ -303,10 +303,31 @@ def delete_seed(sid):
 
 
 def __get_path(elm):
+    def detect_and_remove_cycle(cycle, steps):
+        if cycle[0] in steps:
+            steps_copy = steps[:]
+            start_index = steps_copy.index(cycle[0])
+            end_index = start_index + len(cycle)
+            try:
+                cand_cycle = steps_copy[start_index:end_index]
+                if cand_cycle == cycle:
+                    steps_copy = steps[0:start_index]
+                    if len(steps) > end_index:
+                        steps_copy += steps[end_index:]
+            except IndexError:
+                pass
+            return steps_copy
+        return steps
+
     def identify_seed_cycles(_seeds):
         cycles = [int(c) for c in index.r.smembers('cycles:{}'.format(elm))]
-        sub_path = {'cycles': cycles, 'seeds': _seeds, 'steps': list(reversed(path[:i + 1]))}
-        if not (sub_path in seed_paths):
+        sub_steps = list(reversed(path[:i + 1]))
+        sub_path = {'cycles': cycles, 'seeds': _seeds, 'steps': sub_steps}
+        for c in cycles:
+            cycle = eval(index.r.zrangebyscore('cycles', c, c).pop())
+            sub_steps = detect_and_remove_cycle(cycle, sub_steps)
+        sub_path['steps'] = sub_steps
+        if sub_path not in seed_paths:
             seed_paths.append(sub_path)
         return cycles
 
