@@ -35,15 +35,15 @@ class EmptyVocabTest(FountainTest):
 
 class CreateAndDeleteSingleVocabTest(FountainTest):
     def test_create_vocab(self):
-        vocab_uri = self.post_vocabulary('simplest_cycle')
+        vocab_uri = self.post_vocabulary('two_concept_cycle')
         vocabs = self.get_vocabularies()
         eq_(len(vocabs), 1, 'Fountain should contain the simplest cycle vocabulary')
-        assert 'test' in vocabs, 'The prefix of the contained vocabulary must be "test"'
+        assert 'twoc' in vocabs, 'The prefix of the contained vocabulary must be "twoc"'
         vocab = self.get_vocabulary(vocab_uri)
         assert len(vocab), 'RDF must not be empty'
 
     def test_delete_vocab(self):
-        self.delete_vocabulary('/vocabs/test')
+        self.delete_vocabulary('/vocabs/twoc')
         vocabs = self.get_vocabularies()
         eq_(len(vocabs), False, 'Fountain should be empty again')
         eq_(len(self.types), False, 'There should not be any type available')

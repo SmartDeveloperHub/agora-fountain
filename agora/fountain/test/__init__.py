@@ -101,7 +101,6 @@ class FountainTest(unittest.TestCase):
         for v_uri in vocabs.values():
             rv = test_client.delete(v_uri)
             eq_(rv.status_code, 200, "The resource couldn't be deleted")
-            return rv.data
 
     def setUp(self):
         self.app = app.test_client()
@@ -143,7 +142,8 @@ class FountainTest(unittest.TestCase):
         return json.loads(self.get('/seeds'))["seeds"]
 
     def get_paths(self, node):
-        return json.loads(self.get('paths/{}'.format(node)))["paths"]
+        paths = json.loads(self.get('paths/{}'.format(node)))
+        return paths["paths"], paths["all-cycles"]
 
     def get(self, path, exp_code=200, error_message=None):
         rv = self.app.get(path)

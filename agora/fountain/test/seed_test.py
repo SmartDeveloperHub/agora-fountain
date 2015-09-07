@@ -39,7 +39,7 @@ class UnknownSeedTest(FountainTest):
 
 class KnownSeedTest(FountainTest):
     def test_known_seed(self):
-        self.post_vocabulary('simplest_cycle')
+        self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
         seeds = self.seeds
         assert 'test:Concept1' in seeds, '%s should be the only seed type'
@@ -49,14 +49,14 @@ class KnownSeedTest(FountainTest):
 
 class DuplicateSeedTest(FountainTest):
     def test_duplicate_seed(self):
-        self.post_vocabulary('simplest_cycle')
+        self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
         self.post_seed("test:Concept1", seed_uri, exp_code=409)
 
 
 class ClearSeedTest(FountainTest):
     def test_clear_seed(self):
-        self.post_vocabulary('simplest_cycle')
+        self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
         vocabs = self.get_vocabularies()
         self.delete_vocabulary(vocabs[vocabs.keys().pop()])  # It assumes it contains only one
@@ -68,7 +68,7 @@ class TwoTypesSeedTest(FountainTest):
     def test_two_types_seeds(self):
         c1 = "test:Concept1"
         c2 = "test:Concept2"
-        self.post_vocabulary('simplest_cycle')
+        self.post_vocabulary('two_concept_cycle')
         self.post_seed(c1, seed_uri)
         self.post_seed(c2, seed_uri + '2')
         seeds = self.seeds
@@ -84,7 +84,7 @@ class TwoTypesSeedTest(FountainTest):
 class MultipleSeedsOfSameTypeTest(FountainTest):
     def test_multiple_seeds(self):
         c1 = "test:Concept1"
-        self.post_vocabulary('simplest_cycle')
+        self.post_vocabulary('two_concept_cycle')
         self.post_seed(c1, seed_uri)
         self.post_seed(c1, seed_uri + '2')
         seeds = self.seeds
@@ -99,7 +99,7 @@ class MultipleSeedsOfSameTypeTest(FountainTest):
 class SeedsByTypeTest(FountainTest):
     def test_type_seeds(self):
         c1 = "test:Concept1"
-        self.post_vocabulary('simplest_cycle')
+        self.post_vocabulary('two_concept_cycle')
         self.post_seed(c1, seed_uri)
         c1_seeds = self.get_type_seeds(c1)
         assert len(c1_seeds) == 1 and seed_uri in c1_seeds, '%s should be the only seed available of type %s' % (
@@ -109,7 +109,7 @@ class SeedsByTypeTest(FountainTest):
 class SeedsByUnknownTypeTest(FountainTest):
     def test_type_seeds(self):
         c1 = "test:Concept2"
-        self.post_vocabulary('simplest_cycle')
+        self.post_vocabulary('two_concept_cycle')
         self.post_seed(c1, seed_uri)
         try:
             self.get_type_seeds('unknown')

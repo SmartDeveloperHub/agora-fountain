@@ -1,4 +1,4 @@
-@prefix : <http://www.smartdeveloperhub.org/vocabulary/test#> .
+@prefix : <http://www.smartdeveloperhub.org/vocabulary/twoc#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix scm: <http://www.smartdeveloperhub.org/vocabulary/scm#> .
@@ -6,9 +6,10 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix test: <http://www.smartdeveloperhub.org/vocabulary/test#> .
+@prefix twoc: <http://www.smartdeveloperhub.org/vocabulary/twoc#> .
 @base <http://www.smartdeveloperhub.org/vocabulary/test> .
 
-<http://www.smartdeveloperhub.org/vocabulary/test> rdf:type owl:Ontology .
+<http://www.smartdeveloperhub.org/vocabulary/twoc> rdf:type owl:Ontology .
 
 
 #################################################################
@@ -18,17 +19,17 @@
 #################################################################
 
 
-###  http://www.smartdeveloperhub.org/vocabulary/test#prop1
+###  http://www.smartdeveloperhub.org/vocabulary/test#prop12
 
-test:prop1 rdf:type owl:ObjectProperty .
+test:prop12 rdf:type owl:ObjectProperty .
 
 
 
-###  http://www.smartdeveloperhub.org/vocabulary/test#prop2
+###  http://www.smartdeveloperhub.org/vocabulary/test#prop21
 
-test:prop2 rdf:type owl:ObjectProperty ;
+test:prop21 rdf:type owl:ObjectProperty ;
 
-           owl:inverseOf test:prop1 .
+           owl:inverseOf test:prop12 .
 
 
 
@@ -52,7 +53,7 @@ test:Concept1 rdf:type owl:Class .
 test:Concept2 rdf:type owl:Class ;
 
               rdfs:subClassOf [ rdf:type owl:Restriction ;
-                                owl:onProperty test:prop2 ;
+                                owl:onProperty test:prop21 ;
                                 owl:someValuesFrom test:Concept1
                               ] .
 

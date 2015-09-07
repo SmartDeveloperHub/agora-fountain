@@ -31,6 +31,6 @@ from nose.tools import *
 
 class SeedlessPathTest(FountainTest):
     def test_seedless_path(self):
-        self.post_vocabulary('simplest_cycle')
-        c1_paths = self.get_paths("test:Concept1")
+        self.post_vocabulary('two_concept_cycle')
+        c1_paths, _ = self.get_paths("test:Concept1")
         eq_(len(c1_paths), False, 'Impossible...No seeds, no paths')
