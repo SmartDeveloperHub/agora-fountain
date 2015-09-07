@@ -167,7 +167,7 @@ def __lock_key_pattern(pattern):
         yield k, index.r.lock(k)
 
 
-def __detect_and_remove_cycle(cycle, steps):
+def __detect_and_remove_cycles(cycle, steps):
     if cycle[0] in steps:
         steps_copy = steps[:]
         start_index = steps_copy.index(cycle[0])
@@ -186,16 +186,16 @@ def __detect_and_remove_cycle(cycle, steps):
 
 def find_path(elm):
     def filter_path_cycles(_seeds):
-        cycles = [int(c) for c in index.r.smembers('cycles:{}'.format(elm))]
+        cycle_ids = [int(c) for c in index.r.smembers('cycles:{}'.format(elm))]
         sub_steps = list(reversed(path[:step_index + 1]))
-        sub_path = {'cycles': cycles, 'seeds': _seeds, 'steps': sub_steps}
-        for c in cycles:
-            cycle = eval(index.r.zrangebyscore('cycles', c, c).pop())
-            sub_steps = __detect_and_remove_cycle(cycle, sub_steps)
+        sub_path = {'cycles': cycle_ids, 'seeds': _seeds, 'steps': sub_steps}
+        cycles = [eval(index.r.zrangebyscore('cycles', c, c).pop()) for c in cycle_ids]
+        for cycle in sorted(cycles, key=lambda x: len(x), reverse=True):  # First filter bigger cycles
+            sub_steps = __detect_and_remove_cycles(cycle, sub_steps)
         sub_path['steps'] = sub_steps
         if sub_path not in seed_paths:
             seed_paths.append(sub_path)
-        return cycles
+        return cycle_ids
 
     paths = []
     seed_paths = []
