@@ -83,7 +83,7 @@ class TwoConceptCycleGraphTest(FountainTest):
 seed_uri = "http://localhost/seed"
 
 
-class TwoConcepttCycleSelfSeedPathsTest(FountainTest):
+class TwoConceptCycleSelfSeedPathsTest(FountainTest):
     def test_self_seed(self):
         self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
