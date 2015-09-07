@@ -25,18 +25,19 @@
 __author__ = 'Fernando Serena'
 
 from agora.fountain.index.core import r
+from agora.fountain.exceptions import FountainError
 import base64
 
 
-class TypeNotAvailableError(Exception):
+class TypeNotAvailableError(FountainError):
     pass
 
 
-class DuplicateSeedError(Exception):
+class DuplicateSeedError(FountainError):
     pass
 
 
-class InvalidSeedError(Exception):
+class InvalidSeedError(FountainError):
     pass
 
 

@@ -27,7 +27,7 @@ __author__ = 'Fernando Serena'
 
 import redis
 import agora.fountain.vocab.schema as sch
-from agora.fountain.index.exceptions import FountainError
+from agora.fountain.exceptions import FountainError
 import agora.fountain.vocab.onto as vocs
 from datetime import datetime as dt
 from concurrent.futures.thread import ThreadPoolExecutor
