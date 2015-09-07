@@ -52,6 +52,7 @@ def add_seed(uri, ty):
             if r.sismember('seeds:{}'.format(ty), encoded_uri):
                 raise DuplicateSeedError('{} is already registered as a seed of type {}'.format(uri, ty))
             r.sadd('seeds:{}'.format(ty), base64.b64encode(uri))
+            break
 
     if not type_found:
         raise TypeNotAvailableError("{} is not a valid type".format(ty))
