@@ -1,4 +1,4 @@
-@prefix : <http://www.smartdeveloperhub.org/vocabulary/self#> .
+@prefix : <http://www.smartdeveloperhub.org/vocabulary/self2#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix scm: <http://www.smartdeveloperhub.org/vocabulary/scm#> .
@@ -6,10 +6,10 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix test: <http://www.smartdeveloperhub.org/vocabulary/test#> .
-@prefix self: <http://www.smartdeveloperhub.org/vocabulary/self#> .
+@prefix self2: <http://www.smartdeveloperhub.org/vocabulary/self2#> .
 @base <http://www.smartdeveloperhub.org/vocabulary/test> .
 
-<http://www.smartdeveloperhub.org/vocabulary/self> rdf:type owl:Ontology .
+<http://www.smartdeveloperhub.org/vocabulary/self2> rdf:type owl:Ontology .
 
 
 #################################################################
@@ -21,11 +21,11 @@
 
 ###  http://www.smartdeveloperhub.org/vocabulary/test#prop11a
 
-test:prop11a rdf:type owl:ObjectProperty ;
+test:prop22 rdf:type owl:ObjectProperty ;
 
-           rdfs:range test:Concept1 ;
+           rdfs:range test:Concept2 ;
 
-           rdfs:domain test:Concept1 .
+           rdfs:domain test:Concept2 .
 
 
 
@@ -38,13 +38,13 @@ test:prop11a rdf:type owl:ObjectProperty ;
 #################################################################
 
 
-###  http://www.smartdeveloperhub.org/vocabulary/test#Concept1
+###  http://www.smartdeveloperhub.org/vocabulary/test#Concept2
 
-test:Concept1 rdf:type owl:Class ;
+test:Concept2 rdf:type owl:Class ;
 
               rdfs:subClassOf [ rdf:type owl:Restriction ;
-                                owl:onProperty test:prop11a ;
-                                owl:someValuesFrom test:Concept1
+                                owl:onProperty test:prop22 ;
+                                owl:someValuesFrom test:Concept2
                               ] .
 
 
