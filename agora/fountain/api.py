@@ -28,10 +28,10 @@ from flask import make_response, request, jsonify, render_template, url_for
 from agora.fountain.vocab.schema import prefixes
 import agora.fountain.index.core as index
 import agora.fountain.index.seeds as seeds
-from agora.fountain.index.paths import calculate_paths, pgraph
+from agora.fountain.index.paths import calculate_paths, pgraph, find_path
 import agora.fountain.vocab.onto as vocs
 from agora.fountain.server import app
-from flask_negotiate import consumes, produces
+from flask_negotiate import consumes
 import json
 import itertools
 import base64
@@ -97,12 +97,12 @@ def get_vocabulary(vid):
     return response
 
 
-def analyse_vocabulary(vid):
+def __analyse_vocabulary(vid):
     index.extract_vocabulary(vid)
     calculate_paths()
 
 
-def check_seeds():
+def __check_seeds():
     seed_dict = seeds.get_seeds()
     types = index.get_types()
     obsolete_types = set.difference(set(seed_dict.keys()), set(types))
@@ -124,7 +124,7 @@ def add_vocabulary():
     except vocs.DuplicateVocabulary, e:
         raise Conflict(e.message)
 
-    analyse_vocabulary(vid)
+    __analyse_vocabulary(vid)
 
     response = make_response()
     response.status_code = 201
@@ -148,8 +148,8 @@ def update_vocabulary(vid):
     except Exception, e:
         raise APIError(e.message)
 
-    analyse_vocabulary(vid)
-    check_seeds()
+    __analyse_vocabulary(vid)
+    __check_seeds()
 
     response = make_response()
     response.status_code = 200
@@ -169,8 +169,8 @@ def delete_vocabulary(vid):
     except vocs.UnknownVocabulary, e:
         raise NotFound(e.message)
 
-    analyse_vocabulary(vid)
-    check_seeds()
+    __analyse_vocabulary(vid)
+    __check_seeds()
 
     response = make_response()
     response.status_code = 200
@@ -302,63 +302,7 @@ def delete_seed(sid):
         return response
 
 
-def __get_path(elm):
-    def detect_and_remove_cycle(cycle, steps):
-        if cycle[0] in steps:
-            steps_copy = steps[:]
-            start_index = steps_copy.index(cycle[0])
-            end_index = start_index + len(cycle)
-            try:
-                cand_cycle = steps_copy[start_index:end_index]
-                if cand_cycle == cycle:
-                    steps_copy = steps[0:start_index]
-                    if len(steps) > end_index:
-                        steps_copy += steps[end_index:]
-            except IndexError:
-                pass
-            return steps_copy
-        return steps
-
-    def identify_seed_cycles(_seeds):
-        cycles = [int(c) for c in index.r.smembers('cycles:{}'.format(elm))]
-        sub_steps = list(reversed(path[:i + 1]))
-        sub_path = {'cycles': cycles, 'seeds': _seeds, 'steps': sub_steps}
-        for c in cycles:
-            cycle = eval(index.r.zrangebyscore('cycles', c, c).pop())
-            sub_steps = detect_and_remove_cycle(cycle, sub_steps)
-        sub_path['steps'] = sub_steps
-        if sub_path not in seed_paths:
-            seed_paths.append(sub_path)
-        return cycles
-
-    paths = []
-    seed_paths = []
-    for path, score in index.r.zrange('paths:{}'.format(elm), 0, -1, withscores=True):
-        paths.append((int(score), eval(path)))
-
-    applying_cycles = set([])
-
-    for score, path in paths:
-        for i, step in enumerate(path):
-            ty = step.get('type')
-            type_seeds = seeds.get_type_seeds(ty)
-            if len(type_seeds):
-                seed_cycles = identify_seed_cycles(type_seeds)
-                applying_cycles = applying_cycles.union(set(seed_cycles))
-
-    # It only returns seeds if elm is a type and there are seeds of it
-    req_type_seeds = seeds.get_type_seeds(elm)
-    if len(req_type_seeds):
-        path = []
-        seed_cycles = identify_seed_cycles(req_type_seeds)
-        applying_cycles = applying_cycles.union(set(seed_cycles))
-
-    applying_cycles = [{'cycle': int(cid), 'steps': eval(index.r.zrange('cycles', cid, cid).pop())} for cid in
-                       applying_cycles]
-    return list(seed_paths), applying_cycles
-
-
-def __graph_path(elm, paths, cycles):
+def __graph_path(elm, paths):
     nodes = []
     edges = []
     roots = set([])
@@ -426,9 +370,9 @@ def get_path(elm):
     :param elm: The required prefixed type/property
     :return:
     """
-    seed_paths, all_cycles = __get_path(elm)
+    seed_paths, all_cycles = find_path(elm)
     if 'view' in request.url_rule.rule:
-        nodes, edges, roots = __graph_path(elm, seed_paths, all_cycles)
+        nodes, edges, roots = __graph_path(elm, seed_paths)
         return render_template('graph-path.html',
                                nodes=json.dumps(nodes),
                                edges=json.dumps(edges), roots=json.dumps(roots))
