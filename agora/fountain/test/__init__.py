@@ -29,8 +29,8 @@ from agora.fountain.server import app
 from nose.tools import *
 import networkx as nx
 import json
-from functools import wraps
 from urlparse import urlparse
+import logging
 
 
 def setup():
@@ -44,6 +44,16 @@ def setup():
     r.flushdb()
 
     from agora.fountain import api
+
+
+def compare_path_graphs(test, pattern):
+    for expected in pattern:
+        try:
+            valid_graph = filter(lambda x: x == expected, test).pop()
+            test.remove(valid_graph)
+        except IndexError:
+            pass
+    return not len(test)
 
 
 class AgoraGraph(nx.DiGraph):
@@ -89,6 +99,117 @@ class AgoraGraph(nx.DiGraph):
                 return cycle[p_index - 2]
         return None
 
+    def add_types_from(self, types):
+        self.add_nodes_from(types, ty='type')
+
+    def add_type(self, ty):
+        self.add_node(ty, ty='type', label=ty)
+
+    def add_properties_from(self, props, obj=True):
+        self.add_nodes_from(props, ty='prop', object=obj)
+
+    def add_property(self, prop, obj=True):
+        self.add_node(prop, ty='prop', object=obj, label=prop)
+
+    def link_types(self, source, link, dest):
+        self.add_edges_from([(source, link), (link, dest)])
+
+
+class PathGraph(AgoraGraph):
+    def __init__(self, path=None, cycles=None, data=None, **attr):
+        super(PathGraph, self).__init__(data, **attr)
+        self.__seeds = set([])
+        self.__cycle_graphs = {}
+        self.__cycle_ids = []
+        self.__prev_type, self.__prev_prop = None, None
+        self.root = None
+        if type(path) is dict:
+            self.__parse_path(path)
+        if type(cycles) is list:
+            self.__parse_cycles(cycles)
+
+    def __parse_path(self, path):
+        path_seeds = path['seeds']
+        if path_seeds:
+            self.__seeds = set(path_seeds)
+        raw_steps = path['steps']
+        self.__cycle_ids = path['cycles']
+
+        for step in raw_steps:
+            ty, prop = step['type'], step['property']
+            self.add_step(ty, prop)
+
+    def __parse_cycles(self, cycles):
+        for cycle in cycles:
+            cid = cycle['cycle']
+            if cid in self.__cycle_ids:
+                cycle_steps = cycle['steps']
+                cycle_graph = CycleGraph()
+                for step in cycle_steps:
+                    ty, prop = step['type'], step['property']
+                    cycle_graph.add_step(ty, prop)
+                self.__cycle_graphs[cid] = cycle_graph
+
+    def add_step(self, ty, prop):
+        self.add_type(ty)
+        self.add_property(prop)
+        if self.__prev_prop is not None:
+            self.add_edge(self.__prev_prop, ty)
+        self.add_edge(ty, prop)
+        self.__prev_type, self.__prev_prop = ty, prop
+        if self.root is None:
+            self.root = ty
+
+    @property
+    def seeds(self):
+        return self.__seeds
+
+    @property
+    def cycles(self):
+        return self.__cycle_graphs.keys()
+
+    def get_cycle(self, cid):
+        return self.__cycle_graphs[cid]
+
+    def set_cycle(self, cid, graph):
+        self.__cycle_graphs[cid] = graph
+
+    def __eq__(self, other):
+        def node_match(a_attr, b_attr):
+            return a_attr == b_attr
+
+        def edge_match(a_attr, b_attr):
+            return a_attr == b_attr
+
+        def compare_cycles():
+            def match_cycle(cid):
+                cycle = self.get_cycle(cid)
+                for o_cid in other.cycles:
+                    o_cycle = other.get_cycle(o_cid)
+                    if cycle == o_cycle:
+                        return True
+                return False
+
+            if len(self.cycles) == len(other.cycles):
+                return len(self.cycles) == len(filter(match_cycle, self.cycles))
+            return False
+
+        return self.seeds == other.seeds and nx.is_isomorphic(self, other, node_match=node_match,
+                                                              edge_match=edge_match) and compare_cycles()
+
+
+class CycleGraph(PathGraph):
+    def __init__(self, path=None, cycles=None, data=None, **attr):
+        super(CycleGraph, self).__init__(path=path, cycles=cycles, data=data, **attr)
+        self.__cycle_edge_prop = None
+
+    def add_step(self, ty, prop):
+        super(CycleGraph, self).add_step(ty, prop)
+        if self.__cycle_edge_prop is not None:
+            self.remove_edge(self.__cycle_edge_prop, self.root)
+        self.add_edge(prop, self.root)
+        self.__cycle_edge_prop = prop
+
 
 class FountainTest(unittest.TestCase):
     @classmethod
@@ -102,9 +223,15 @@ class FountainTest(unittest.TestCase):
             rv = test_client.delete(v_uri)
             eq_(rv.status_code, 200, "The resource couldn't be deleted")
 
+    @classmethod
+    def setUpClass(cls):
+        from agora.fountain.index.core import r
+        r.flushdb()
+
     def setUp(self):
         self.app = app.test_client()
         self._graph = None
+        self.log = logging.getLogger('agora.fountain.test')
 
     def get_vocabularies(self):
         return json.loads(self.get('/vocabs'))
@@ -186,7 +313,7 @@ class FountainTest(unittest.TestCase):
         if self._graph is None:
             _graph = AgoraGraph()
             types = self.types
-            _graph.add_nodes_from(types, ty='type')
+            _graph.add_types_from(types)
             for node in self.properties:
                 p_dict = self.get_property(node)
                 dom = p_dict.get('domain')
@@ -195,7 +322,7 @@ class FountainTest(unittest.TestCase):
                 if p_dict.get('type') == 'object':
                     edges.extend([(node, r) for r in ran])
                 _graph.add_edges_from(edges)
-                _graph.add_node(node, ty='prop', object=p_dict.get('type') == 'object')
+                _graph.add_property(node, obj=p_dict.get('type') == 'object')
             for node in types:
                 p_dict = self.get_type(node)
                 refs = p_dict.get('refs')
