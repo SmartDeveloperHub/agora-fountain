@@ -112,6 +112,12 @@ def get_type_seeds(ty):
             break
 
     if not type_found:
+        # Check if it is a property
+        prop_keys = r.keys('*:properties')
+        for pk in prop_keys:
+            if r.sismember(pk, ty):
+                return []
+
         raise TypeNotAvailableError(ty)
 
     return [base64.b64decode(seed) for seed in list(r.smembers('seeds:{}'.format(ty)))]
