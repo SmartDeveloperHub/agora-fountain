@@ -43,27 +43,15 @@ class TwoInThreeConceptCycleGraphTest(FountainTest):
         self.post_vocabulary('two_concept_cycle')
 
         expected_graph = AgoraGraph()
-        expected_graph.add_node('test:Concept1')
-        expected_graph.add_node('test:Concept2')
-        expected_graph.add_node('test:Concept3')
+        expected_graph.add_types_from(['test:Concept1', 'test:Concept2', 'test:Concept3'])
+        expected_graph.add_properties_from(['test:prop12', 'test:prop21', 'test:prop23', 'test:prop31'])
+        expected_graph.link_types('test:Concept1', 'test:prop12', 'test:Concept2')
+        expected_graph.link_types('test:Concept2', 'test:prop21', 'test:Concept1')
+        expected_graph.link_types('test:Concept2', 'test:prop23', 'test:Concept3')
+        expected_graph.link_types('test:Concept3', 'test:prop31', 'test:Concept1')
 
         graph = self.graph
-        props = sorted(graph.properties)
-        eq_(len(props), 4, 'Fountain should contain four properties, but found: %s' % len(props))
-        assert 'test:prop12' in props and 'test:prop23' in props and 'test:prop31' in props and 'test:prop21' in props
-
-        self.check_property('test:prop12', domain=['test:Concept1'], range=['test:Concept2'], inverse='test:prop21')
-        self.check_property('test:prop21', domain=['test:Concept2'], range=['test:Concept1'], inverse='test:prop12')
-        self.check_property('test:prop23', domain=['test:Concept2'], range=['test:Concept3'])
-        self.check_property('test:prop31', domain=['test:Concept3'], range=['test:Concept1'])
-
-        types = sorted(graph.types)
-        eq_(len(types), 3, 'Fountain should contain three types, but found: %s' % len(types))
-        assert 'test:Concept1' in types and 'test:Concept2' in types and 'test:Concept3' in types
-
-        self.check_type('test:Concept1', properties=['test:prop12'], refs=['test:prop31', 'test:prop21'])
-        self.check_type('test:Concept2', properties=['test:prop21', 'test:prop23'], refs=['test:prop12'])
-        self.check_type('test:Concept3', properties=['test:prop31'], refs=['test:prop23'])
+        assert graph == expected_graph
 
 
 seed_uri = "http://localhost/seed"
@@ -74,18 +62,13 @@ class TwoInThreeConceptCycleSelfSeedPathsTest(FountainTest):
         self.post_vocabulary('three_concept_cycle')
         self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
-
-        c1_paths, all_cycles = self.get_paths("test:Concept1")
-        eq_(len(c1_paths), 1, 'Only one path was expected')
-        c1_path = c1_paths.pop()
-
-        path_graph = PathGraph(path=c1_path, cycles=all_cycles)
+        paths, all_cycles = self.get_paths("test:Concept1")
 
         expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
         expected_graph.set_cycle(0, cycle_0)
         expected_graph.set_cycle(1, cycle_1)
 
-        eq_(path_graph, expected_graph)
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
 
 
 class TwoInThreeConceptCycleConcept2PathsTest(FountainTest):
@@ -93,18 +76,14 @@ class TwoInThreeConceptCycleConcept2PathsTest(FountainTest):
         self.post_vocabulary('three_concept_cycle')
         self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
-        c2_paths, all_cycles = self.get_paths('test:Concept2')
-        eq_(len(c2_paths), 1, 'Only one path was expected')
-        c2_path = c2_paths.pop()
+        paths, all_cycles = self.get_paths('test:Concept2')
 
-        path_graph = PathGraph(path=c2_path, cycles=all_cycles)
         expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
-
         expected_graph.add_step('test:Concept1', 'test:prop12')
         expected_graph.set_cycle(0, cycle_0)
         expected_graph.set_cycle(1, cycle_1)
 
-        eq_(path_graph, expected_graph)
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
 
 
 class TwoInThreeConceptCycleConcept3PathsTest(FountainTest):
@@ -112,19 +91,15 @@ class TwoInThreeConceptCycleConcept3PathsTest(FountainTest):
         self.post_vocabulary('three_concept_cycle')
         self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
-        c3_paths, all_cycles = self.get_paths('test:Concept3')
-        eq_(len(c3_paths), 1, 'Only one path was expected')
-        c3_path = c3_paths.pop()
+        paths, all_cycles = self.get_paths('test:Concept3')
 
-        path_graph = PathGraph(path=c3_path, cycles=all_cycles)
         expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
-
         expected_graph.add_step('test:Concept1', 'test:prop12')
         expected_graph.add_step('test:Concept2', 'test:prop23')
         expected_graph.set_cycle(0, cycle_0)
         expected_graph.set_cycle(1, cycle_1)
 
-        eq_(path_graph, expected_graph)
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
 
 
 class TwoInThreeConceptCyclePartiallySeededPathsTest(FountainTest):

@@ -100,19 +100,27 @@ class AgoraGraph(nx.DiGraph):
         return None
 
     def add_types_from(self, types):
-        self.add_nodes_from(types, ty='type')
+        for ty in types:
+            self.add_node(ty, ty='type', label=ty)
 
     def add_type(self, ty):
         self.add_node(ty, ty='type', label=ty)
 
     def add_properties_from(self, props, obj=True):
-        self.add_nodes_from(props, ty='prop', object=obj)
+        for prop in props:
+            self.add_node(prop, ty='prop', object=obj, label=prop)
 
     def add_property(self, prop, obj=True):
         self.add_node(prop, ty='prop', object=obj, label=prop)
 
     def link_types(self, source, link, dest):
         self.add_edges_from([(source, link), (link, dest)])
+
+    def __eq__(self, other):
+        def match(x, y):
+            return x == y
+
+        return nx.is_isomorphic(self, other, node_match=match, edge_match=match)
 
 
 class PathGraph(AgoraGraph):

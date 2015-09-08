@@ -24,60 +24,26 @@
 
 __author__ = 'Fernando Serena'
 
-from agora.fountain.test import FountainTest
-import json
+from agora.fountain.test import FountainTest, AgoraGraph, PathGraph, compare_path_graphs, CycleGraph
 from nose.tools import *
+
+cycle_0 = CycleGraph()
+cycle_0.add_step('test:Concept1', 'test:prop12')
+cycle_0.add_step('test:Concept2', 'test:prop21')
 
 
 class TwoConceptCycleGraphTest(FountainTest):
     def test_graph(self):
         self.post_vocabulary('two_concept_cycle')
+
+        expected_graph = AgoraGraph()
+        expected_graph.add_types_from(['test:Concept1', 'test:Concept2'])
+        expected_graph.add_properties_from(['test:prop12', 'test:prop21'])
+        expected_graph.link_types('test:Concept1', 'test:prop12', 'test:Concept2')
+        expected_graph.link_types('test:Concept2', 'test:prop21', 'test:Concept1')
+
         graph = self.graph
-        props = sorted(graph.properties)
-        eq_(len(props), 2, 'Fountain should contain two properties, but found: %s' % len(props))
-        assert 'test:prop12' == props.pop(0)
-        assert 'test:prop21' == props.pop()
-
-        # prop12
-        p12_domain = graph.get_property_domain('test:prop12')
-        eq_(len(p12_domain), 1, 'prop12 must have 1 domain type')
-        assert 'test:Concept1' in p12_domain
-        p12_range = graph.get_property_range('test:prop12')
-        eq_(len(p12_range), 1, 'prop12 must have 1 range type')
-        assert 'test:Concept2' in p12_range
-        p12_inverse = graph.get_inverse_property('test:prop12')
-        eq_(p12_inverse, 'test:prop21', 'test:prop21 is the inverse of test:prop12')
-
-        # prop21
-        p21_domain = graph.get_property_domain('test:prop21')
-        eq_(len(p21_domain), 1, 'prop21 must have 1 domain type')
-        assert 'test:Concept2' in p21_domain
-        p21_range = graph.get_property_range('test:prop21')
-        eq_(len(p21_range), 1, 'prop21 must have 1 range type')
-        assert 'test:Concept1' in p21_range
-        p21_inverse = graph.get_inverse_property('test:prop21')
-        eq_(p21_inverse, 'test:prop12', 'test:prop12 is the inverse of test:prop21')
-
-        types = sorted(graph.types)
-        eq_(len(types), 2, 'Fountain should contain two types, but found: %s' % len(types))
-        assert 'test:Concept1' == types.pop(0)
-        assert 'test:Concept2' == types.pop()
-
-        # Concept 1
-        c1_properties = graph.get_type_properties('test:Concept1')
-        eq_(len(c1_properties), 1, 'Concept1 must have 1 property')
-        assert 'test:prop12' in c1_properties
-        c1_refs = graph.get_type_refs('test:Concept1')
-        eq_(len(c1_refs), 1, 'Concept1 must have 1 reference')
-        assert 'test:prop21' in c1_refs
-
-        # Concept 2
-        c2_properties = graph.get_type_properties('test:Concept2')
-        eq_(len(c2_properties), 1, 'Concept2 must have 1 property')
-        assert 'test:prop21' in c2_properties
-        c2_refs = graph.get_type_refs('test:Concept2')
-        eq_(len(c2_refs), 1, 'Concept2 must have 1 reference')
-        assert 'test:prop12' in c2_refs
+        assert graph == expected_graph
 
 
 seed_uri = "http://localhost/seed"
@@ -87,55 +53,40 @@ class TwoConceptCycleSelfSeedPathsTest(FountainTest):
     def test_self_seed(self):
         self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
-        c1_paths, _ = self.get_paths("test:Concept1")
-        eq_(len(c1_paths), 1, 'Only one path was expected')
-        c1_path = c1_paths.pop()
-        eq_(len(c1_path['steps']), 0, 'Steps list should be empty')
-        eq_(len(c1_path['seeds']), 1, 'test:Concept1 seed was expected')
-        c1_path_seed = c1_path['seeds'].pop()
-        eq_(c1_path_seed, seed_uri, 'Someone has changed it maliciously...')
-        c1_cycles = c1_path['cycles']
-        assert len(c1_cycles) == 1 and c1_cycles.pop() == 0, 'test:Concept1 should belong to a cycle'
+        paths, all_cycles = self.get_paths("test:Concept1")
+
+        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
+        expected_graph.set_cycle(0, cycle_0)
+
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
 
 
 class TwoConceptCycleSeedlessConceptPathsTest(FountainTest):
     def test_seedless_concept(self):
         self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
-        c2_paths, _ = self.get_paths('test:Concept2')
-        eq_(len(c2_paths), 1, 'Only one path was expected')
-        c2_path = c2_paths.pop()
-        eq_(len(c2_path['steps']), 1, 'Steps list must have length 1')
-        eq_(len(c2_path['seeds']), 1, 'test:Concept1 seed was expected')
-        c2_path_seed = c2_path['seeds'].pop()
-        eq_(c2_path_seed, seed_uri, 'Someone has changed it maliciously...')
-        c2_cycles = c2_path['cycles']
-        assert len(c2_cycles) == 1 and c2_cycles.pop() == 0, 'test:Concept2 should belong to a cycle'
+        paths, all_cycles = self.get_paths("test:Concept2")
+
+        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
+        expected_graph.add_step('test:Concept1', 'test:prop12')
+        expected_graph.set_cycle(0, cycle_0)
+
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
 
 
 class TwoConceptCycleFullySeededPathsTest(FountainTest):
     def test_fully_seeded(self):
-
-        def check_seed(s, expected):
-            eq_(s, expected, "%s should be the seed for this path" % expected)
-
         self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
         self.post_seed("test:Concept2", seed_uri + '2')
-        c2_paths, _ = self.get_paths('test:Concept2')
-        eq_(len(c2_paths), 2, 'Two paths are expected')
+        paths, all_cycles = self.get_paths("test:Concept2")
 
-        for path in c2_paths:
-            steps_len = len(path["steps"])
-            seeds = path["seeds"]
-            eq_(len(seeds), 1, "Only one seed is expected")
-            seed = seeds.pop()
-            if steps_len == 1:  # Path with Concept1 seed (candidate)
-                check_seed(seed, seed_uri)
-            elif steps_len == 0:  # Path with Concept2 seed (candidate)
-                check_seed(seed, seed_uri + '2')
-            else:
-                assert False, 'Invalid path with unexpected number of steps'
+        expected_graph_1 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
+        expected_graph_1.add_step('test:Concept1', 'test:prop12')
+        expected_graph_1.set_cycle(0, cycle_0)
 
-            cycles = path['cycles']
-            assert len(cycles) == 1 and cycles.pop() == 0, 'test:Concept2 should belong to a cycle'
+        expected_graph_2 = PathGraph(path={'seeds': [seed_uri + '2'], 'steps': [], 'cycles': [0]})
+        expected_graph_2.set_cycle(0, cycle_0)
+
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths],
+                                   [expected_graph_1, expected_graph_2])
