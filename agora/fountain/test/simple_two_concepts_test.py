@@ -44,6 +44,18 @@ class SimpleTwoConceptsGraphTest(FountainTest):
 seed_uri = "http://localhost/seed"
 
 
+class SimpleTwoConceptsPropertyPathTest(FountainTest):
+    def a_test_self_seed(self):
+        self.post_vocabulary('simple_two_concepts')
+        self.post_seed("test:Concept2", seed_uri)
+        paths, all_cycles = self.get_paths("test:prop21")
+
+        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': []})
+        expected_graph.add_step('test:Concept2', 'test:prop21')
+
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
+
+
 class SimpleTwoConceptsSelfSeedPathsTest(FountainTest):
     def a_test_self_seed(self):
         self.post_vocabulary('simple_two_concepts')
