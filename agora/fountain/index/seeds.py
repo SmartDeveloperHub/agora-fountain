@@ -25,6 +25,7 @@
 __author__ = 'Fernando Serena'
 
 from agora.fountain.index.core import r
+from agora.fountain.index import core as index
 from agora.fountain.exceptions import FountainError
 import base64
 
@@ -104,20 +105,16 @@ def get_seeds():
 
 
 def get_type_seeds(ty):
-    type_keys = r.keys('*:types')
-    type_found = False
-    for tk in type_keys:
-        if r.sismember(tk, ty):
-            type_found = True
-            break
-
-    if not type_found:
-        # Check if it is a property
-        prop_keys = r.keys('*:properties')
-        for pk in prop_keys:
-            if r.sismember(pk, ty):
-                return []
-
-        raise TypeNotAvailableError(ty)
-
-    return [base64.b64decode(seed) for seed in list(r.smembers('seeds:{}'.format(ty)))]
+    try:
+        t_dict = index.get_type(ty)
+        all_seeds = set([])
+        for t in t_dict['sub'] + [ty]:
+            all_seeds.update([base64.b64decode(seed) for seed in list(r.smembers('seeds:{}'.format(t)))])
+        return list(all_seeds)
+    except TypeError:
+        # Check if it is a property...and return an empty list
+        try:
+            index.get_property(ty)
+            return []
+        except TypeError:
+            raise TypeNotAvailableError(ty)

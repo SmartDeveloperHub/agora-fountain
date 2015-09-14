@@ -225,6 +225,10 @@ def get_property(prop):
     def get_inverse_range(ip):
         return reduce(set.union, __get_by_pattern('*:properties:{}:range'.format(ip), r.smembers), set([]))
 
+    all_prop_keys = r.keys('*:properties')
+    if not filter(lambda k: r.sismember(k, prop), all_prop_keys):
+        raise TypeError('Unknown property')
+
     domain = reduce(set.union, __get_by_pattern('*:properties:{}:domain'.format(prop), r.smembers), set([]))
     rang = reduce(set.union, __get_by_pattern('*:properties:{}:range'.format(prop), r.smembers), set([]))
     inv = reduce(set.union, __get_by_pattern('*:properties:{}:inverse'.format(prop), r.smembers), set([]))
@@ -260,6 +264,10 @@ def is_type(ty):
 
 def get_type(ty):
     try:
+        all_type_keys = r.keys('*:types')
+        if not filter(lambda k: r.sismember(k, ty), all_type_keys):
+            raise TypeError('Unknown type')
+
         super_types = reduce(set.union, __get_by_pattern('*:types:{}:super'.format(ty), r.smembers), set([]))
         sub_types = reduce(set.union, __get_by_pattern('*:types:{}:sub'.format(ty), r.smembers), set([]))
         type_props = reduce(set.union, __get_by_pattern('*:types:{}:props'.format(ty), r.smembers), set([]))

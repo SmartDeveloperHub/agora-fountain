@@ -81,18 +81,3 @@ class OneSubclassChildSeedParentPathsTest(FountainTest):
         expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': []})
 
         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
-
-#
-#
-# class SelfAndSimpleConceptCycleSeedlessConceptPathsTest(FountainTest):
-#     def test_seedless_concept(self):
-#         self.post_vocabulary('simple_two_concepts')
-#         self.post_vocabulary('self_cycle_2')
-#         self.post_seed("test:Concept2", seed_uri)
-#         c1_paths, all_cycles = self.get_paths('test:Concept1')
-#
-#         expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
-#         expected_graph.add_step('test:Concept2', 'test:prop21')
-#         expected_graph.set_cycle(0, cycle_0)
-#
-#         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in c1_paths], [expected_graph])
