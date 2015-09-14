@@ -52,7 +52,8 @@ while True:
     except BusyLoadingError as re:
         log.warning(re.message)
     except RedisError:
-        break
+        print 'Redis is not available'
+        sys.exit(-1)
 
 
 def __get_by_pattern(pattern, func):
