@@ -245,9 +245,7 @@ def get_type_seeds(ty):
     try:
         return jsonify({"seeds": seeds.get_type_seeds(ty)})
     except seeds.TypeNotAvailableError as e:
-        response = make_response(e.message)
-        response.status_code = 404
-        return response
+        raise NotFound(e.message)
 
 
 @app.route('/seeds', methods=['POST'])
@@ -264,11 +262,9 @@ def add_seed():
         response.headers['Location'] = url_for('get_seed', sid=sid, _external=True)
         response.status_code = 201
     except (seeds.TypeNotAvailableError, ValueError) as e:
-        response = make_response(e.message)
-        response.status_code = 400
+        raise APIError(e.message)
     except seeds.DuplicateSeedError as e:
-        response = make_response(e.message)
-        response.status_code = 409
+        raise Conflict(e.message)
     return response
 
 
@@ -281,10 +277,8 @@ def get_seed(sid):
     try:
         seed = seeds.get_seed(sid)
         return jsonify(seed)
-    except seeds.InvalidSeedError:
-        response = make_response()
-        response.status_code = 404
-        return response
+    except seeds.InvalidSeedError, e:
+        raise NotFound(e.message)
 
 
 @app.route('/seeds/id/<sid>', methods=['DELETE'])
@@ -296,10 +290,8 @@ def delete_seed(sid):
     try:
         seeds.delete_seed(sid)
         return make_response()
-    except seeds.InvalidSeedError:
-        response = make_response()
-        response.status_code = 404
-        return response
+    except seeds.InvalidSeedError, e:
+        raise NotFound(e.message)
 
 
 def __graph_path(elm, paths):
@@ -370,14 +362,17 @@ def get_path(elm):
     :param elm: The required prefixed type/property
     :return:
     """
-    seed_paths, all_cycles = find_path(elm)
-    if 'view' in request.url_rule.rule:
-        nodes, edges, roots = __graph_path(elm, seed_paths)
-        return render_template('graph-path.html',
-                               nodes=json.dumps(nodes),
-                               edges=json.dumps(edges), roots=json.dumps(roots))
-    else:
-        return jsonify({'paths': seed_paths, 'all-cycles': all_cycles})
+    try:
+        seed_paths, all_cycles = find_path(elm)
+        if 'view' in request.url_rule.rule:
+            nodes, edges, roots = __graph_path(elm, seed_paths)
+            return render_template('graph-path.html',
+                                   nodes=json.dumps(nodes),
+                                   edges=json.dumps(edges), roots=json.dumps(roots))
+        else:
+            return jsonify({'paths': seed_paths, 'all-cycles': all_cycles})
+    except seeds.TypeNotAvailableError, e:
+        raise APIError(e.message)
 
 
 @app.route('/graph/')
