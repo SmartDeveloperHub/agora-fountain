@@ -47,13 +47,15 @@ def setup():
 
 
 def compare_path_graphs(test, pattern):
-    for expected in pattern:
-        try:
-            valid_graph = filter(lambda x: x == expected, test).pop()
-            test.remove(valid_graph)
-        except IndexError:
-            pass
-    return not len(test)
+    if len(test) == len(pattern):
+        for expected in pattern:
+            try:
+                valid_graph = filter(lambda x: x == expected, test).pop()
+                test.remove(valid_graph)
+            except IndexError:
+                pass
+        return not len(test)
+    return False
 
 
 class AgoraGraph(nx.DiGraph):
@@ -141,7 +143,7 @@ class PathGraph(AgoraGraph):
         if path_seeds:
             self.__seeds = set(path_seeds)
         raw_steps = path['steps']
-        self.__cycle_ids = path['cycles']
+        self.__cycle_ids = path.get('cycles', [])
 
         for step in raw_steps:
             ty, prop = step['type'], step['property']
@@ -338,6 +340,10 @@ class FountainTest(unittest.TestCase):
                 edges = [(r, node) for r in refs]
                 edges.extend([(node, p) for p in props])
                 _graph.add_edges_from(edges)
+                if p_dict['super']:
+                    _graph[node]['super'] = p_dict['super']
+                if p_dict['sub']:
+                    _graph[node]['sub'] = p_dict['sub']
 
         return _graph
 
