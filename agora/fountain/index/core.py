@@ -159,12 +159,12 @@ def __extract_property(p, vid):
             pipe.sadd('vocabs:{}:properties'.format(vid), p)
             pipe.hset('vocabs:{}:properties:{}'.format(vid, p), 'uri', p)
             for dc in list(sch.get_property_domain(p)):
-                pipe.sadd('vocabs:{}:properties:{}:domain'.format(vid, p), dc)
+                pipe.sadd('vocabs:{}:properties:{}:_domain'.format(vid, p), dc)
             for dc in list(sch.get_property_range(p)):
-                pipe.sadd('vocabs:{}:properties:{}:range'.format(vid, p), dc)
+                pipe.sadd('vocabs:{}:properties:{}:_range'.format(vid, p), dc)
             for dc in list(sch.get_property_inverses(p)):
-                pipe.sadd('vocabs:{}:properties:{}:inverse'.format(vid, p), dc)
-            pipe.set('vocabs:{}:properties:{}:type'.format(vid, p), p_type())
+                pipe.sadd('vocabs:{}:properties:{}:_inverse'.format(vid, p), dc)
+            pipe.set('vocabs:{}:properties:{}:_type'.format(vid, p), p_type())
             pipe.execute()
     except RedisError as e:
         raise FountainError(e.message)
@@ -236,7 +236,7 @@ def delete_vocabulary(vid):
     """
     v_types = get_types(vid)
     if len(v_types):
-        __remove_from_sets(v_types, '*:domain', '*:range', '*:sub', '*:super')
+        __remove_from_sets(v_types, '*:_domain', '*:_range', '*:sub', '*:super')
     v_props = get_properties(vid)
     if len(v_props):
         __remove_from_sets(v_props, '*:refs', '*:props')
@@ -271,7 +271,16 @@ def get_types(vid=None):
     :param vid:
     :return:
     """
-    return __get_vocab_set('vocabs:*:types', vid)
+    def shared_type(t):
+        return any(filter(lambda k: r.sismember(k, t), all_type_keys))
+
+    vid_types = __get_vocab_set('vocabs:*:types', vid)
+
+    if vid is not None:
+        all_type_keys = filter(lambda k: k != 'vocabs:{}:types'.format(vid), r.keys("vocabs:*:types"))
+        vid_types = filter(lambda t: not shared_type(t), vid_types)
+
+    return vid_types
 
 
 def get_properties(vid=None):
@@ -280,7 +289,16 @@ def get_properties(vid=None):
     :param vid:
     :return:
     """
-    return __get_vocab_set('vocabs:*:properties', vid)
+    def shared_property(t):
+        return any(filter(lambda k: r.sismember(k, t), all_prop_keys))
+
+    vid_props = __get_vocab_set('vocabs:*:properties', vid)
+
+    if vid is not None:
+        all_prop_keys = filter(lambda k: k != 'vocabs:{}:properties'.format(vid), r.keys("vocabs:*:properties"))
+        vid_props = filter(lambda t: not shared_property(t), vid_props)
+
+    return vid_props
 
 
 def get_property(prop):
@@ -290,18 +308,18 @@ def get_property(prop):
     :return:
     """
     def get_inverse_domain(ip):
-        return reduce(set.union, __get_by_pattern('*:properties:{}:domain'.format(ip), r.smembers), set([]))
+        return reduce(set.union, __get_by_pattern('*:properties:{}:_domain'.format(ip), r.smembers), set([]))
 
     def get_inverse_range(ip):
-        return reduce(set.union, __get_by_pattern('*:properties:{}:range'.format(ip), r.smembers), set([]))
+        return reduce(set.union, __get_by_pattern('*:properties:{}:_range'.format(ip), r.smembers), set([]))
 
     all_prop_keys = r.keys('*:properties')
     if not filter(lambda k: r.sismember(k, prop), all_prop_keys):
         raise TypeError('Unknown property')
 
-    domain = reduce(set.union, __get_by_pattern('*:properties:{}:domain'.format(prop), r.smembers), set([]))
-    rang = reduce(set.union, __get_by_pattern('*:properties:{}:range'.format(prop), r.smembers), set([]))
-    inv = reduce(set.union, __get_by_pattern('*:properties:{}:inverse'.format(prop), r.smembers), set([]))
+    domain = reduce(set.union, __get_by_pattern('*:properties:{}:_domain'.format(prop), r.smembers), set([]))
+    rang = reduce(set.union, __get_by_pattern('*:properties:{}:_range'.format(prop), r.smembers), set([]))
+    inv = reduce(set.union, __get_by_pattern('*:properties:{}:_inverse'.format(prop), r.smembers), set([]))
 
     if len(inv):
         inverse_dr = [(get_inverse_domain(i), get_inverse_range(i)) for i in inv]
@@ -309,7 +327,7 @@ def get_property(prop):
             domain.update(ra)
             rang.update(dom)
 
-    ty = __get_by_pattern('*:properties:{}:type'.format(prop), r.get)
+    ty = __get_by_pattern('*:properties:{}:_type'.format(prop), r.get)
     try:
         ty = ty.pop()
     except IndexError:
