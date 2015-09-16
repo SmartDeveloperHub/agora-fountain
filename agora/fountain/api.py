@@ -99,8 +99,9 @@ def get_vocabulary(vid):
     return response
 
 
-def __analyse_vocabulary(vid):
-    index.extract_vocabulary(vid)
+def __analyse_vocabularies(vids):
+    for vid in reversed(vids):
+        index.extract_vocabulary(vid)
     calculate_paths()
 
 
@@ -120,17 +121,17 @@ def add_vocabulary():
     :return:
     """
     try:
-        vid = vocs.add_vocabulary(request.data)
-    except IndexError:
+        vids = vocs.add_vocabulary(request.data)
+    except vocs.VocabularyNotFound, e:
         raise APIError('Ontology URI not found')
     except vocs.DuplicateVocabulary, e:
         raise Conflict(e.message)
 
-    __analyse_vocabulary(vid)
+    __analyse_vocabularies(vids)
 
     response = make_response()
     response.status_code = 201
-    response.headers['Location'] = url_for('get_vocabulary', vid=vid, _external=True)
+    response.headers['Location'] = url_for('get_vocabulary', vid=vids.pop(0), _external=True)
     return response
 
 
@@ -150,7 +151,7 @@ def update_vocabulary(vid):
     except Exception, e:
         raise APIError(e.message)
 
-    __analyse_vocabulary(vid)
+    __analyse_vocabularies([vid])
     __check_seeds()
 
     response = make_response()
@@ -171,7 +172,7 @@ def delete_vocabulary(vid):
     except vocs.UnknownVocabulary, e:
         raise NotFound(e.message)
 
-    __analyse_vocabulary(vid)
+    __analyse_vocabularies([vid])
     __check_seeds()
 
     response = make_response()

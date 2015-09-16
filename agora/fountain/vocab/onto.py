@@ -21,6 +21,7 @@
   limitations under the License.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
+from rdflib.plugins.parsers.notation3 import BadSyntax
 
 __author__ = 'Fernando Serena'
 
@@ -40,6 +41,10 @@ class DuplicateVocabulary(VocabularyException):
     pass
 
 
+class VocabularyNotFound(VocabularyException):
+    pass
+
+
 class UnknownVocabulary(VocabularyException):
     pass
 
@@ -53,9 +58,14 @@ def __load_owl(owl):
     owl_g = Graph()
     owl_g.parse(source=StringIO.StringIO(owl), format='turtle')
 
-    uri = list(owl_g.subjects(RDF.type, OWL.Ontology)).pop()
-    vid = [p for (p, u) in owl_g.namespaces() if uri in u and p != ''].pop()
-    return vid, uri, owl_g
+    try:
+        uri = list(owl_g.subjects(RDF.type, OWL.Ontology)).pop()
+        vid = [p for (p, u) in owl_g.namespaces() if uri in u and p != ''].pop()
+        imports = owl_g.objects(uri, OWL.imports)
+
+        return vid, uri, owl_g, imports
+    except IndexError:
+        raise VocabularyNotFound()
 
 
 def add_vocabulary(owl):
@@ -64,13 +74,36 @@ def add_vocabulary(owl):
     :param owl:
     :return:
     """
-    vid, uri, owl_g = __load_owl(owl)
+    vid, uri, owl_g, imports = __load_owl(owl)
 
     if vid in sch.contexts():
         raise DuplicateVocabulary('Vocabulary already contained')
 
     sch.add_context(vid, owl_g)
-    return vid
+    vids = [vid]
+
+    # TODO: Import referenced ontologies
+    for im_uri in imports:
+        print im_uri
+        im_g = Graph()
+        try:
+            im_g.load(im_uri, format='turtle')
+        except BadSyntax:
+            try:
+                im_g.load(im_uri)
+            except BadSyntax:
+                print 'bad syntax in {}'.format(im_uri)
+
+        try:
+            vids.extend(add_vocabulary(im_g.serialize(format='turtle')))
+        except DuplicateVocabulary, e:
+            print 'already added'
+        except VocabularyNotFound, e:
+            print 'uri not found for {}'.format(im_uri)
+        except Exception, e:
+            print e.message
+
+    return vids
 
 
 def update_vocabulary(vid, owl):
@@ -80,7 +113,7 @@ def update_vocabulary(vid, owl):
     :param owl:
     :return:
     """
-    owl_vid, uri, owl_g = __load_owl(owl)
+    owl_vid, uri, owl_g, imports = __load_owl(owl)
 
     if vid != owl_vid:
         raise Exception("Identifiers don't match")

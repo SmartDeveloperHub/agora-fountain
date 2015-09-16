@@ -214,6 +214,8 @@ def get_properties(vid=None):
     properties.update([__q_name(o or d) for (o, d) in
                        context.query(
                            """SELECT DISTINCT ?o ?d WHERE {
+                                {?d a rdf:Property}
+                                UNION
                                 {?o a owl:ObjectProperty}
                                 UNION
                                 {?d a owl:DatatypeProperty}

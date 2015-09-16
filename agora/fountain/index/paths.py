@@ -166,6 +166,7 @@ def calculate_paths():
                         if step.get('type') in c or step.get('property') in c:
                             pipe.sadd('cycles:{}'.format(elm), j)
                 pipe.zadd('paths:{}'.format(elm), i, path)
+                pipe.execute()
         pipe.execute()
 
     for _, l in locks:

@@ -64,6 +64,8 @@ def view_graph():
             ibase += len(op_edges) + 1
         else:
             ran = data.get('range')
+            if ran is None:
+                print nid
             if len(ran):
                 dom = [t for (t, _) in pgraph.in_edges(nid)]
                 dom = [d for d in dom if not set.intersection(set(index.get_type(d).get('super')), set(dom))]
