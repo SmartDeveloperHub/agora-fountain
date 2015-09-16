@@ -24,7 +24,8 @@
 
 __author__ = 'Fernando Serena'
 
-from agora.fountain.test import FountainTest, AgoraGraph, PathGraph, compare_path_graphs
+from agora.fountain.test import FountainTest
+from agora.fountain.test.util import AgoraGraph, PathGraph, compare_path_graphs
 
 
 class OneSubclassGraphTest(FountainTest):
@@ -38,6 +39,7 @@ class OneSubclassGraphTest(FountainTest):
 
         graph = self.graph
         assert graph == expected_graph
+
 
 seed_uri = "http://localhost/seed"
 

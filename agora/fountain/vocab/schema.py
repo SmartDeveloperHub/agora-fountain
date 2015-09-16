@@ -24,8 +24,10 @@
 
 __author__ = 'Fernando Serena'
 import logging
+
 from rdflib import ConjunctiveGraph, URIRef, BNode
-from rdflib.namespace import OWL, RDF, RDFS
+from rdflib.namespace import RDFS
+
 from agora.fountain.server import app
 
 log = logging.getLogger('agora_fountain.schema')
@@ -46,7 +48,12 @@ _namespaces = {}
 _prefixes = {}
 
 
-def flat_slice(lst):
+def __flat_slice(lst):
+    """
+
+    :param lst:
+    :return:
+    """
     lst = list(lst)
     for i, _ in enumerate(lst):
         while hasattr(lst[i], "__iter__") and not isinstance(lst[i], basestring):
@@ -54,12 +61,22 @@ def flat_slice(lst):
     return set(filter(lambda x: x is not None, lst))
 
 
-def qname(uri):
+def __q_name(uri):
+    """
+
+    :param uri:
+    :return:
+    """
     q = uri.n3(graph.namespace_manager)
     return q
 
 
-def _extend_prefixed(pu):
+def __extend_prefixed(pu):
+    """
+
+    :param pu:
+    :return:
+    """
     parts = pu.split(':')
     if len(parts) == 1:
         parts = ('', parts[0])
@@ -70,6 +87,11 @@ def _extend_prefixed(pu):
 
 
 def prefixes(vid=None):
+    """
+
+    :param vid:
+    :return:
+    """
     context = graph
     if vid is not None:
         context = context.get_context(vid)
@@ -77,25 +99,51 @@ def prefixes(vid=None):
 
 
 def contexts():
+    """
+
+    :return:
+    """
     return [str(x.identifier) for x in graph.contexts()]
 
 
 def update_context(vid, g):
+    """
+
+    :param vid:
+    :param g:
+    :return:
+    """
     context = graph.get_context(vid)
     graph.remove_context(context)
     add_context(vid, g)
 
 
 def remove_context(vid):
+    """
+
+    :param vid:
+    :return:
+    """
     context = graph.get_context(vid)
     graph.remove_context(context)
 
 
 def get_context(vid):
+    """
+
+    :param vid:
+    :return:
+    """
     return graph.get_context(vid)
 
 
 def add_context(vid, g):
+    """
+
+    :param vid:
+    :param g:
+    :return:
+    """
     vid_context = graph.get_context(vid)
     for t in g.triples((None, None, None)):
         vid_context.add(t)
@@ -109,6 +157,11 @@ def add_context(vid, g):
 
 
 def get_types(vid=None):
+    """
+
+    :param vid:
+    :return:
+    """
     context = graph
     if vid is not None:
         context = context.get_context(vid)
@@ -124,8 +177,8 @@ def get_types(vid=None):
              OPTIONAL
              {?c rdfs:subClassOf ?x FILTER(isURI(?x))}
            }""")
-    classes_set = flat_slice(q_class_result)
-    types.update([qname(c) for c in classes_set])
+    classes_set = __flat_slice(q_class_result)
+    types.update([__q_name(c) for c in classes_set])
     q_class_result = context.query(
         """SELECT DISTINCT ?r ?d WHERE {
              ?p a owl:ObjectProperty.
@@ -133,9 +186,9 @@ def get_types(vid=None):
              UNION
              {?p rdfs:domain ?d FILTER(isURI(?r))}
            }""")
-    classes_set = flat_slice(q_class_result)
-    types.update([qname(c) for c in classes_set])
-    types.update([qname(x[0]) for x in context.query(
+    classes_set = __flat_slice(q_class_result)
+    types.update([__q_name(c) for c in classes_set])
+    types.update([__q_name(x[0]) for x in context.query(
         """SELECT DISTINCT ?c WHERE {
              {?r owl:allValuesFrom ?c}
              UNION
@@ -149,28 +202,39 @@ def get_types(vid=None):
 
 
 def get_properties(vid=None):
+    """
+
+    :param vid:
+    :return:
+    """
     context = graph
     if vid is not None:
         context = context.get_context(vid)
     properties = set([])
-    properties.update([qname(o or d) for (o, d) in
-                context.query(
-                    """SELECT DISTINCT ?o ?d WHERE {
-                         {?o a owl:ObjectProperty}
-                         UNION
-                         {?d a owl:DatatypeProperty}
-                         UNION
-                         {?r a owl:Restriction . ?r owl:onProperty ?o}
-                       }""")])
+    properties.update([__q_name(o or d) for (o, d) in
+                       context.query(
+                           """SELECT DISTINCT ?o ?d WHERE {
+                                {?o a owl:ObjectProperty}
+                                UNION
+                                {?d a owl:DatatypeProperty}
+                                UNION
+                                {?r a owl:Restriction . ?r owl:onProperty ?o}
+                              }""")])
     return properties
 
 
 def get_property_domain(prop, vid=None):
+    """
+
+    :param prop:
+    :param vid:
+    :return:
+    """
     context = graph
     if vid is not None:
         context = context.get_context(vid)
     dom = set([])
-    domain_set = set([qname(c[0]) for c in context.query(
+    domain_set = set([__q_name(c[0]) for c in context.query(
         """SELECT DISTINCT ?c WHERE {
              { %s rdfs:domain ?c }
              UNION
@@ -184,6 +248,12 @@ def get_property_domain(prop, vid=None):
 
 
 def is_object_property(prop, vid=None):
+    """
+
+    :param prop:
+    :param vid:
+    :return:
+    """
     context = graph
     if vid is not None:
         context = context.get_context(vid)
@@ -200,12 +270,18 @@ def is_object_property(prop, vid=None):
 
 
 def get_property_range(prop, vid=None):
+    """
+
+    :param prop:
+    :param vid:
+    :return:
+    """
     context = graph
     if vid is not None:
         context = context.get_context(vid)
     rang = set([])
 
-    range_set = set([qname(r[0]) for r in context.query(
+    range_set = set([__q_name(r[0]) for r in context.query(
         """SELECT DISTINCT ?r WHERE {
              {%s rdfs:range ?r}
              UNION
@@ -225,11 +301,17 @@ def get_property_range(prop, vid=None):
 
 
 def get_property_inverses(prop, vid=None):
+    """
+
+    :param prop:
+    :param vid:
+    :return:
+    """
     context = graph
     if vid is not None:
         context = context.get_context(vid)
     inverses = set([])
-    inverses.update([qname(i[0]) for i in context.query(
+    inverses.update([__q_name(i[0]) for i in context.query(
         """SELECT ?i WHERE {
              {%s owl:inverseOf ?i}
              UNION
@@ -239,25 +321,43 @@ def get_property_inverses(prop, vid=None):
 
 
 def get_supertypes(ty, vid=None):
+    """
+
+    :param ty:
+    :param vid:
+    :return:
+    """
     context = graph
     if vid is not None:
         context = context.get_context(vid)
-    res = map(lambda x: qname(x), filter(lambda y: isinstance(y, URIRef),
-                                         context.transitive_objects(_extend_prefixed(ty), RDFS.subClassOf)))
+    res = map(lambda x: __q_name(x), filter(lambda y: isinstance(y, URIRef),
+                                            context.transitive_objects(__extend_prefixed(ty), RDFS.subClassOf)))
     return set(filter(lambda x: str(x) != ty, res))
 
 
 def get_subtypes(ty, vid=None):
+    """
+
+    :param ty:
+    :param vid:
+    :return:
+    """
     context = graph
     if vid is not None:
         context = context.get_context(vid)
-    res = map(lambda x: qname(x), filter(lambda y: isinstance(y, URIRef),
-                                         context.transitive_subjects(RDFS.subClassOf, _extend_prefixed(ty))))
+    res = map(lambda x: __q_name(x), filter(lambda y: isinstance(y, URIRef),
+                                            context.transitive_subjects(RDFS.subClassOf, __extend_prefixed(ty))))
 
     return filter(lambda x: str(x) != ty, res)
 
 
 def get_type_properties(ty, vid=None):
+    """
+
+    :param ty:
+    :param vid:
+    :return:
+    """
     context = graph
     if vid is not None:
         context = context.get_context(vid)
@@ -266,7 +366,7 @@ def get_type_properties(ty, vid=None):
     all_types.add(ty)
     for sc in all_types:
         props.update(
-            [qname(p[0]) for p in context.query(
+            [__q_name(p[0]) for p in context.query(
                 """SELECT ?p WHERE {
                      {%s rdfs:subClassOf [ owl:onProperty ?p ]}
                      UNION
@@ -277,6 +377,12 @@ def get_type_properties(ty, vid=None):
 
 
 def get_type_references(ty, vid=None):
+    """
+
+    :param ty:
+    :param vid:
+    :return:
+    """
     context = graph
     if vid is not None:
         context = context.get_context(vid)
@@ -285,7 +391,7 @@ def get_type_references(ty, vid=None):
     all_types.add(ty)
     for sc in all_types:
         refs.update(
-            [qname(p[0]) for p in context.query(
+            [__q_name(p[0]) for p in context.query(
                 """SELECT ?p WHERE {
                     { ?r owl:onProperty ?p.
                       {?r owl:someValuesFrom %s}

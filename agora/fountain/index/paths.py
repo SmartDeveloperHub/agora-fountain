@@ -25,11 +25,13 @@
 __author__ = 'Fernando Serena'
 
 import logging
-from agora.fountain.index import core as index, seeds
+from datetime import datetime as dt
+
 from concurrent.futures.thread import ThreadPoolExecutor
 from concurrent.futures import wait, ALL_COMPLETED
-from datetime import datetime as dt
 import networkx as nx
+
+from agora.fountain.index import core as index, seeds
 
 log = logging.getLogger('agora.fountain.paths')
 
@@ -37,6 +39,10 @@ pgraph = nx.DiGraph()
 
 
 def __build_directed_graph():
+    """
+
+    :return:
+    """
     pgraph.clear()
 
     pgraph.add_nodes_from(index.get_types(), ty='type')
@@ -60,10 +66,14 @@ def __build_directed_graph():
     print 'graph', list(pgraph.edges())
 
 
-__build_directed_graph()
-
-
 def __build_paths(node, root, steps=None):
+    """
+
+    :param node:
+    :param root:
+    :param steps:
+    :return:
+    """
     paths = []
     if steps is None:
         steps = []
@@ -86,6 +96,10 @@ def __build_paths(node, root, steps=None):
 
 
 def calculate_paths():
+    """
+
+    :return:
+    """
     def __calculate_node_paths(n, d):
         ty = d.get('ty')
         _paths = []
@@ -132,7 +146,7 @@ def calculate_paths():
 
     node_paths = []
     futures = []
-    with ThreadPoolExecutor(20) as th_pool:
+    with ThreadPoolExecutor(8) as th_pool:
         for node, data in pgraph.nodes(data=True):
             futures.append(th_pool.submit(__calculate_node_paths, node, data))
         wait(futures, timeout=None, return_when=ALL_COMPLETED)
@@ -162,12 +176,23 @@ def calculate_paths():
 
 
 def __lock_key_pattern(pattern):
+    """
+
+    :param pattern:
+    :return:
+    """
     pattern_keys = index.r.keys(pattern)
     for k in pattern_keys:
         yield k, index.r.lock(k)
 
 
 def __detect_and_remove_cycles(cycle, steps):
+    """
+
+    :param cycle:
+    :param steps:
+    :return:
+    """
     if cycle[0] in steps:
         steps_copy = steps[:]
         start_index = steps_copy.index(cycle[0])
@@ -185,7 +210,17 @@ def __detect_and_remove_cycles(cycle, steps):
 
 
 def find_path(elm):
+    """
+
+    :param elm:
+    :return:
+    """
     def filter_path_cycles(_seeds):
+        """
+
+        :param _seeds:
+        :return:
+        """
         cycle_ids = [int(c) for c in index.r.smembers('cycles:{}'.format(elm))]
         sub_steps = list(reversed(path[:step_index + 1]))
         sub_path = {'cycles': cycle_ids, 'seeds': _seeds, 'steps': sub_steps}
@@ -223,3 +258,7 @@ def find_path(elm):
     applying_cycles = [{'cycle': int(cid), 'steps': eval(index.r.zrange('cycles', cid, cid).pop())} for cid in
                        applying_cycles]
     return list(seed_paths), applying_cycles
+
+
+# Build the current graph on import
+__build_directed_graph()

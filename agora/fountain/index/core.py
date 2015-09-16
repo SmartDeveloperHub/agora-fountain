@@ -35,13 +35,12 @@ import logging
 from agora.fountain.server import app
 import sys
 
-
 log = logging.getLogger('agora.fountain.index')
 
 redis_conf = app.config['REDIS']
 pool = redis.ConnectionPool(host=redis_conf.get('host'), port=redis_conf.get('port'), db=redis_conf.get('db'))
 r = redis.StrictRedis(connection_pool=pool)
-tpool = ThreadPoolExecutor(20)
+tpool = ThreadPoolExecutor(8)
 
 # Ping redis to check if it's ready
 requests = 0
@@ -55,8 +54,18 @@ while True:
         print 'Redis is not available'
         sys.exit(-1)
 
+store_mode = app.config['STORE']
+if 'memory' in store_mode:
+    r.flushdb()
+
 
 def __get_by_pattern(pattern, func):
+    """
+
+    :param pattern:
+    :param func:
+    :return:
+    """
     def get_all():
         for k in pkeys:
             yield func(k)
@@ -69,6 +78,12 @@ def __get_by_pattern(pattern, func):
 
 
 def __remove_from_sets(values, *args):
+    """
+
+    :param values:
+    :param args:
+    :return:
+    """
     try:
         for pattern in args:
             keys = r.keys(pattern)
@@ -84,6 +99,12 @@ def __remove_from_sets(values, *args):
 
 
 def __get_vocab_set(pattern, vid=None):
+    """
+
+    :param pattern:
+    :param vid:
+    :return:
+    """
     try:
         if vid is not None:
             pattern = pattern.replace(':*:', ':%s:' % vid)
@@ -94,6 +115,13 @@ def __get_vocab_set(pattern, vid=None):
 
 
 def __extract_type(t, vid):
+    """
+
+    :param t:
+    :param vid:
+    :return:
+    """
+    log.debug('Extracting type {} from the {} vocabulary...'.format(t, vid))
     try:
         with r.pipeline() as pipe:
             pipe.multi()
@@ -112,6 +140,12 @@ def __extract_type(t, vid):
 
 
 def __extract_property(p, vid):
+    """
+
+    :param p:
+    :param vid:
+    :return:
+    """
     def p_type():
         if sch.is_object_property(p):
             return 'object'
@@ -119,6 +153,7 @@ def __extract_property(p, vid):
             return 'data'
 
     try:
+        log.debug('Extracting property {} from the {} vocabulary...'.format(p, vid))
         with r.pipeline() as pipe:
             pipe.multi()
             pipe.sadd('vocabs:{}:properties'.format(vid), p)
@@ -136,6 +171,11 @@ def __extract_property(p, vid):
 
 
 def __extract_types(vid):
+    """
+
+    :param vid:
+    :return:
+    """
     types = sch.get_types(vid)
 
     other_vocabs = filter(lambda x: x != vid, vocs.get_vocabularies())
@@ -164,6 +204,11 @@ def __extract_types(vid):
 
 
 def __extract_properties(vid):
+    """
+
+    :param vid:
+    :return:
+    """
     properties = sch.get_properties(vid)
 
     other_vocabs = filter(lambda x: x != vid, vocs.get_vocabularies())
@@ -171,8 +216,8 @@ def __extract_properties(vid):
     for ovid in other_vocabs:
         o_types = [t for t in get_types(ovid)]
         for oty in o_types:
-            otype = get_type(oty)
-            if set.intersection(properties, otype.get('refs')) or set.intersection(properties, otype.get('properties')):
+            o_type = get_type(oty)
+            if set.intersection(properties, o_type.get('refs')) or set.intersection(properties, o_type.get('properties')):
                 dependent_types.add((ovid, oty))
 
     futures = []
@@ -184,6 +229,11 @@ def __extract_properties(vid):
 
 
 def delete_vocabulary(vid):
+    """
+
+    :param vid:
+    :return:
+    """
     v_types = get_types(vid)
     if len(v_types):
         __remove_from_sets(v_types, '*:domain', '*:range', '*:sub', '*:super')
@@ -199,6 +249,11 @@ def delete_vocabulary(vid):
 
 
 def extract_vocabulary(vid):
+    """
+
+    :param vid:
+    :return:
+    """
     log.info('Extracting vocabulary {}...'.format(vid))
     delete_vocabulary(vid)
     start_time = dt.now()
@@ -211,14 +266,29 @@ def extract_vocabulary(vid):
 
 
 def get_types(vid=None):
+    """
+
+    :param vid:
+    :return:
+    """
     return __get_vocab_set('vocabs:*:types', vid)
 
 
 def get_properties(vid=None):
+    """
+
+    :param vid:
+    :return:
+    """
     return __get_vocab_set('vocabs:*:properties', vid)
 
 
 def get_property(prop):
+    """
+
+    :param prop:
+    :return:
+    """
     def get_inverse_domain(ip):
         return reduce(set.union, __get_by_pattern('*:properties:{}:domain'.format(ip), r.smembers), set([]))
 
@@ -249,6 +319,11 @@ def get_property(prop):
 
 
 def is_property(prop):
+    """
+
+    :param prop:
+    :return:
+    """
     try:
         return len(r.keys('*:properties:{}:*'.format(prop)))
     except RedisError as e:
@@ -256,6 +331,11 @@ def is_property(prop):
 
 
 def is_type(ty):
+    """
+
+    :param ty:
+    :return:
+    """
     try:
         return len(r.keys('*:types:{}:*'.format(ty)))
     except RedisError as e:
@@ -263,6 +343,11 @@ def is_type(ty):
 
 
 def get_type(ty):
+    """
+
+    :param ty:
+    :return:
+    """
     try:
         all_type_keys = r.keys('*:types')
         if not filter(lambda k: r.sismember(k, ty), all_type_keys):

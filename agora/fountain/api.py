@@ -24,17 +24,19 @@
 
 __author__ = 'Fernando Serena'
 
+import json
+
 from flask import make_response, request, jsonify, render_template, url_for
+from flask_negotiate import consumes
+
 from agora.fountain.vocab.schema import prefixes
 import agora.fountain.index.core as index
 import agora.fountain.index.seeds as seeds
-from agora.fountain.index.paths import calculate_paths, pgraph, find_path
+from agora.fountain.view.path import view_path
+from agora.fountain.view.graph import view_graph
+from agora.fountain.index.paths import calculate_paths, find_path
 import agora.fountain.vocab.onto as vocs
 from agora.fountain.server import app
-from flask_negotiate import consumes
-import json
-import itertools
-import base64
 
 
 class APIError(Exception):
@@ -294,66 +296,6 @@ def delete_seed(sid):
         raise NotFound(e.message)
 
 
-def __graph_path(elm, paths):
-    nodes = []
-    edges = []
-    roots = set([])
-    mem_edges = set([])
-
-    for path in paths:
-        steps = path['steps']
-        last_node = None
-        last_prop = None
-        for i, step in enumerate(steps):
-            ty = step['type']
-            prop = step['property']
-            node_d = {'data': {'id': base64.b16encode(ty), 'label': ty, 'shape': 'roundrectangle',
-                               'width': max(100, len(ty) * 12)}}
-            if not i:
-                roots.add(base64.b16encode(ty))
-                node_d['classes'] = 'seed'
-
-            nodes.append(node_d)
-            if last_node is not None and (last_node, last_prop, ty) not in mem_edges:
-                edges.append(
-                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
-                              'label': last_prop + '\n\n\n',
-                              'target': base64.b16encode(ty)}})
-                mem_edges.add((last_node, last_prop, ty))
-            last_node = ty
-            last_prop = prop
-
-        if index.is_type(elm):
-            nodes.append({'data': {'id': base64.b16encode(elm), 'label': elm, 'shape': 'roundrectangle',
-                                   'width': len(elm) * 10}, 'classes': 'end'})
-            if (last_node, last_prop, elm) not in mem_edges:
-                edges.append(
-                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
-                              'label': last_prop + '\n\n\n',
-                              'target': base64.b16encode(elm)}})
-                mem_edges.add((last_node, last_prop, elm))
-        else:
-            prop = index.get_property(elm)
-            prop_range = prop['range']
-            prop_range = [d for d in prop_range if not set.intersection(set(index.get_type(d).get('super')),
-                                                                        set(prop_range))]
-            prop_type = prop['type']
-            for r in prop_range:
-                shape = 'roundrectangle'
-                if prop_type == 'data':
-                    shape = 'ellipse'
-                nodes.append({'data': {'id': base64.b16encode(r), 'label': r, 'shape': shape,
-                                       'width': len(elm) * 10}})
-                if (last_node, elm, r) not in mem_edges:
-                    edges.append(
-                        {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
-                                  'label': elm + '\n\n',
-                                  'target': base64.b16encode(r)}, 'classes': 'end'})
-                    mem_edges.add((last_node, elm, r))
-
-    return nodes, edges, list(roots)
-
-
 @app.route('/paths/<elm>')
 @app.route('/paths/<elm>/view')
 def get_path(elm):
@@ -365,7 +307,7 @@ def get_path(elm):
     try:
         seed_paths, all_cycles = find_path(elm)
         if 'view' in request.url_rule.rule:
-            nodes, edges, roots = __graph_path(elm, seed_paths)
+            nodes, edges, roots = view_path(elm, seed_paths)
             return render_template('graph-path.html',
                                    nodes=json.dumps(nodes),
                                    edges=json.dumps(edges), roots=json.dumps(roots))
@@ -377,60 +319,7 @@ def get_path(elm):
 
 @app.route('/graph/')
 def show_graph():
-    types = []
-    nodes = []
-    edges = []
-    roots = []
-
-    ibase = 0
-    nodes_dict = dict([(nid, base64.b16encode(nid)) for nid in pgraph.nodes()])
-    for (nid, data) in pgraph.nodes(data=True):
-        if data.get('ty') == 'type':
-            types.append(nid)
-            has_seeds = len(seeds.get_type_seeds(nid))
-            node_d = {'data': {'id': nodes_dict[nid], 'label': nid, 'shape': 'roundrectangle',
-                               'width': len(nid) * 10}}
-            if has_seeds:
-                roots.append(nodes_dict[nid])
-                node_d['classes'] = 'seed'
-            nodes.append(node_d)
-            ibase += 1
-        elif data.get('ty') == 'prop' and data.get('object'):
-            dom = [t for (t, _) in pgraph.in_edges(nid)]
-            ran = [t for (_, t) in pgraph.out_edges(nid)]
-            dom = [d for d in dom if not set.intersection(set(index.get_type(d).get('super')), set(dom))]
-            ran = [r for r in ran if not set.intersection(set(index.get_type(r).get('super')), set(ran))]
-
-            op_edges = list(itertools.product(*[dom, ran]))
-            edges.extend([{'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid + '\n\n',
-                                    'target': nodes_dict[tg]}} for i, (s, tg) in enumerate(op_edges)])
-            ibase += len(op_edges) + 1
-        else:
-            ran = data.get('range')
-            if len(ran):
-                dom = [t for (t, _) in pgraph.in_edges(nid)]
-                dom = [d for d in dom if not set.intersection(set(index.get_type(d).get('super')), set(dom))]
-                dp_edges = list(itertools.product(*[dom, ran]))
-
-                for i, (s, t) in enumerate(dp_edges):
-                    rid = 'n{}'.format(len(nodes_dict) + len(nodes))
-                    nodes.append({'data': {'id': rid, 'label': t, 'width': len(t) * 10, 'shape': 'ellipse'}})
-                    edges.append(
-                        {'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid + '\n\n',
-                                  'target': rid}})
-                ibase += len(dp_edges) + 1
-
-    for t in types:
-        supertypes = index.get_type(t).get('super')
-        supertypes = [s for s in supertypes if not set.intersection(set(index.get_type(s).get('sub')),
-                                                                    set(supertypes))]
-        st_edges = [{'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[st], 'label': '',
-                              'target': nodes_dict[t]}, 'classes': 'subclass'}
-                    for i, st in enumerate(supertypes) if st in nodes_dict]
-        if len(st_edges):
-            edges.extend(st_edges)
-
-        ibase += len(st_edges) + 1
+    nodes, edges, roots = view_graph()
 
     return render_template('graph-vocabs.html',
                            nodes=json.dumps(nodes),

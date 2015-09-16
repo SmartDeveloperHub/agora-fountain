@@ -24,8 +24,9 @@
 
 __author__ = 'Fernando Serena'
 
-from agora.fountain.test import FountainTest
 from nose.tools import *
+
+from agora.fountain.test import FountainTest
 
 seed_uri = "http://localhost/seed"
 

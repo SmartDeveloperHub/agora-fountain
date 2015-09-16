@@ -24,8 +24,10 @@
 
 __author__ = 'Fernando Serena'
 
-from agora.fountain.test import FountainTest, AgoraGraph, compare_path_graphs, PathGraph
 from nose.tools import *
+
+from agora.fountain.test import FountainTest
+from agora.fountain.test.util import AgoraGraph, PathGraph, compare_path_graphs
 
 
 class SimpleTwoConceptsGraphTest(FountainTest):

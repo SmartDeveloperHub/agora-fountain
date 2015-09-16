@@ -24,7 +24,8 @@
 
 __author__ = 'Fernando Serena'
 
-from agora.fountain.test import FountainTest, AgoraGraph, PathGraph, CycleGraph, compare_path_graphs
+from agora.fountain.test import FountainTest
+from agora.fountain.test.util import AgoraGraph, PathGraph, CycleGraph, compare_path_graphs
 
 cycle_0 = CycleGraph()
 cycle_0.add_step('test:Concept2', 'test:prop22')
@@ -43,6 +44,7 @@ class SelfAndSimpleConceptCycleGraphTest(FountainTest):
 
         graph = self.graph
         assert graph == expected_graph
+
 
 seed_uri = "http://localhost/seed"
 

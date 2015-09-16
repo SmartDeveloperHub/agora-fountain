@@ -24,7 +24,6 @@
 
 __author__ = 'Fernando Serena'
 
-import os
 import logging
 
 
@@ -40,9 +39,10 @@ class DevelopmentConfig(Config):
     LOG = logging.DEBUG
     REDIS = {
         'host': 'localhost',
-        'db': 1
+        'db': 1,
+        'port': 6379
     }
-    STORE = 'persist'
+    STORE = 'memory'
 
 
 class TestingConfig(Config):
@@ -50,7 +50,8 @@ class TestingConfig(Config):
     LOG = logging.DEBUG
     REDIS = {
         'host': 'localhost',
-        'db': 2
+        'db': 2,
+        'port': 6379
     }
     TESTING = True
     STORE = 'memory'
@@ -61,6 +62,7 @@ class ProductionConfig(Config):
     LOG = logging.INFO
     REDIS = {
         'host': 'localhost',
-        'db': 1
+        'db': 1,
+        'port': 6379
     }
     STORE = 'persist'

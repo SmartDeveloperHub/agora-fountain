@@ -24,31 +24,32 @@
 
 __author__ = 'Fernando Serena'
 
+import StringIO
+
 from rdflib import Graph, RDF
 from rdflib.namespace import OWL
-import StringIO
+
 import agora.fountain.vocab.schema as sch
 
 
 class VocabularyException(Exception):
-    def __init__(self, message):
-        Exception.__init__(self)
-        self.message = message
+    pass
 
 
 class DuplicateVocabulary(VocabularyException):
-    def __init__(self, message):
-        Exception.__init__(self)
-        self.message = message
+    pass
 
 
 class UnknownVocabulary(VocabularyException):
-    def __init__(self, message):
-        Exception.__init__(self)
-        self.message = message
+    pass
 
 
 def __load_owl(owl):
+    """
+
+    :param owl:
+    :return:
+    """
     owl_g = Graph()
     owl_g.parse(source=StringIO.StringIO(owl), format='turtle')
 
@@ -58,6 +59,11 @@ def __load_owl(owl):
 
 
 def add_vocabulary(owl):
+    """
+
+    :param owl:
+    :return:
+    """
     vid, uri, owl_g = __load_owl(owl)
 
     if vid in sch.contexts():
@@ -68,6 +74,12 @@ def add_vocabulary(owl):
 
 
 def update_vocabulary(vid, owl):
+    """
+
+    :param vid:
+    :param owl:
+    :return:
+    """
     owl_vid, uri, owl_g = __load_owl(owl)
 
     if vid != owl_vid:
@@ -80,6 +92,11 @@ def update_vocabulary(vid, owl):
 
 
 def delete_vocabulary(vid):
+    """
+
+    :param vid:
+    :return:
+    """
     if vid not in sch.contexts():
         raise UnknownVocabulary('Vocabulary id is not known')
 
@@ -87,8 +104,17 @@ def delete_vocabulary(vid):
 
 
 def get_vocabularies():
+    """
+
+    :return:
+    """
     return sch.contexts()
 
 
 def get_vocabulary(vid):
+    """
+
+    :param vid:
+    :return:
+    """
     return sch.get_context(vid).serialize(format='turtle')
