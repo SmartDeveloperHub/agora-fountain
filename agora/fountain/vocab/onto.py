@@ -26,6 +26,7 @@ from rdflib.plugins.parsers.notation3 import BadSyntax
 __author__ = 'Fernando Serena'
 
 import StringIO
+import urlparse
 
 from rdflib import Graph, RDF
 from rdflib.namespace import OWL
@@ -60,8 +61,12 @@ def __load_owl(owl):
 
     try:
         uri = list(owl_g.subjects(RDF.type, OWL.Ontology)).pop()
-        vid = [p for (p, u) in owl_g.namespaces() if uri in u and p != ''].pop()
+        vid = [p for (p, u) in owl_g.namespaces() if uri in u and p != '']
         imports = owl_g.objects(uri, OWL.imports)
+        if not len(vid):
+            vid = urlparse.urlparse(uri).path.split('/')[-1]
+        else:
+            vid = vid.pop()
 
         return vid, uri, owl_g, imports
     except IndexError:
@@ -95,7 +100,8 @@ def add_vocabulary(owl):
                 print 'bad syntax in {}'.format(im_uri)
 
         try:
-            vids.extend(add_vocabulary(im_g.serialize(format='turtle')))
+            child_vids = add_vocabulary(im_g.serialize(format='turtle'))
+            vids.extend(child_vids)
         except DuplicateVocabulary, e:
             print 'already added'
         except VocabularyNotFound, e:

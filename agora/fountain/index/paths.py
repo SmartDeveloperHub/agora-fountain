@@ -65,6 +65,7 @@ def __build_directed_graph():
 
     print 'graph', list(pgraph.edges())
 
+import time
 
 def __build_paths(node, root, steps=None):
     """
@@ -74,18 +75,26 @@ def __build_paths(node, root, steps=None):
     :param steps:
     :return:
     """
+    def is_already_contained():
+        if step in steps:
+            return True
+        return any(filter(lambda xs: (xs['type'] == t or xs['type'] in index.get_type(t)['super']) and node == xs['property'], steps))
+
     paths = []
     if steps is None:
         steps = []
     pred = pgraph.predecessors(node)
-    for t in [x for x in pred if x != root or not steps]:
+    for t in [x for x in pred if (x != root and root not in index.get_type(x)['sub']) or not steps]:
+        # time.sleep(1)
         step = {'property': node, 'type': t}
-        if step in steps:
+        if is_already_contained():
             continue
         path = [step]
         new_steps = steps[:]
         new_steps.append(step)
-        for p in pgraph.predecessors(t):
+        print 'new step {}'.format(step)
+        for p in [x for x in pgraph.predecessors(t) if x not in index.get_property(node)['inverse']]:
+            print 'following {} as a pred property of {}'.format(p, t)
             sub_paths = __build_paths(p, root, new_steps[:])
             for sp in sub_paths:
                 paths.append(path + sp)
@@ -101,6 +110,7 @@ def calculate_paths():
     :return:
     """
     def __calculate_node_paths(n, d):
+        print 'calculating path for {} with data {}'.format(n, d)
         ty = d.get('ty')
         _paths = []
         if ty == 'type':
@@ -146,16 +156,24 @@ def calculate_paths():
 
     node_paths = []
     futures = []
-    with ThreadPoolExecutor(8) as th_pool:
-        for node, data in pgraph.nodes(data=True):
-            futures.append(th_pool.submit(__calculate_node_paths, node, data))
-        wait(futures, timeout=None, return_when=ALL_COMPLETED)
-        for f in futures:
-            if f.done():
-                elm, res = f.result()
-                if len(res):
-                    node_paths.append((elm, res))
-        th_pool.shutdown()
+
+    for node, data in pgraph.nodes(data=True):
+        elm, res = __calculate_node_paths(node, data)
+        if len(res):
+            node_paths.append((elm, res))
+
+    # with ThreadPoolExecutor(40) as th_pool:
+    #     for node, data in pgraph.nodes(data=True):
+    #         futures.append(th_pool.submit(__calculate_node_paths, node, data))
+    #     wait(futures, timeout=None, return_when=ALL_COMPLETED)
+    #     for f in futures:
+    #         if f.done():
+    #             elm, res = f.result()
+    #             if len(res):
+    #                 node_paths.append((elm, res))
+    #     th_pool.shutdown()
+
+    print 'preparing to persist the calculated paths...{}'.format(len(node_paths))
 
     with index.r.pipeline() as pipe:
         pipe.multi()
