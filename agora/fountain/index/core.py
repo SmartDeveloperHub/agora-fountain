@@ -34,13 +34,14 @@ from concurrent.futures.thread import ThreadPoolExecutor
 import logging
 from agora.fountain.server import app
 import sys
+import multiprocessing
 
 log = logging.getLogger('agora.fountain.index')
 
 redis_conf = app.config['REDIS']
 pool = redis.ConnectionPool(host=redis_conf.get('host'), port=redis_conf.get('port'), db=redis_conf.get('db'))
 r = redis.StrictRedis(connection_pool=pool)
-tpool = ThreadPoolExecutor(8)
+tpool = ThreadPoolExecutor(multiprocessing.cpu_count())
 
 # Ping redis to check if it's ready
 requests = 0
