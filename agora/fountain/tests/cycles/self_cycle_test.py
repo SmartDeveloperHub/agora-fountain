@@ -24,19 +24,18 @@
 
 __author__ = 'Fernando Serena'
 
-from agora.fountain.test import FountainTest
-from agora.fountain.test.util import AgoraGraph, PathGraph, compare_path_graphs
+from agora.fountain.tests import FountainTest
+from agora.fountain.tests.util import AgoraGraph, PathGraph, compare_path_graphs
 
 
-class TwoSelfCyclesGraphTest(FountainTest):
+class SelfCycleGraphTest(FountainTest):
     def test_graph(self):
-        self.post_vocabulary('two_self_cycles')
+        self.post_vocabulary('self_cycle')
 
         expected_graph = AgoraGraph()
         expected_graph.add_types_from(['test:Concept1'])
-        expected_graph.add_properties_from(['test:prop11a', 'test:prop11b'])
+        expected_graph.add_properties_from(['test:prop11a'])
         expected_graph.link_types('test:Concept1', 'test:prop11a', 'test:Concept1')
-        expected_graph.link_types('test:Concept1', 'test:prop11b', 'test:Concept1')
 
         graph = self.graph
         assert graph == expected_graph
@@ -45,15 +44,14 @@ class TwoSelfCyclesGraphTest(FountainTest):
 seed_uri = "http://localhost/seed"
 
 
-class TwoSelfCyclesPathsTest(FountainTest):
+class SelfCyclePathsTest(FountainTest):
     def test_path(self):
-        self.post_vocabulary('two_self_cycles')
+        self.post_vocabulary('self_cycle')
         self.post_seed("test:Concept1", seed_uri)
         paths, all_cycles = self.get_paths("test:Concept1")
 
-        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]},
-                                   cycles=[{'cycle': 0, 'steps': []}, {'cycle': 1, 'steps': []}])
+        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]},
+                                   cycles=[{'cycle': 0, 'steps': []}])
         expected_graph.get_cycle(0).add_step('test:Concept1', 'test:prop11a')
-        expected_graph.get_cycle(1).add_step('test:Concept1', 'test:prop11b')
 
         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])

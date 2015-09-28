@@ -24,8 +24,8 @@
 
 __author__ = 'Fernando Serena'
 
-from agora.fountain.test import FountainTest
-from agora.fountain.test.util import AgoraGraph, PathGraph, CycleGraph, compare_path_graphs
+from agora.fountain.tests import FountainTest
+from agora.fountain.tests.util import AgoraGraph, PathGraph, CycleGraph, compare_path_graphs
 
 cycle_0 = CycleGraph()
 cycle_0.add_step('test:Concept2', 'test:prop22')

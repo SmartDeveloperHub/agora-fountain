@@ -24,19 +24,22 @@
 
 __author__ = 'Fernando Serena'
 
-from nose.tools import *
+from agora.fountain.tests import FountainTest
+from agora.fountain.tests.util import AgoraGraph, PathGraph, CycleGraph, compare_path_graphs
 
-from agora.fountain.test import FountainTest
-from agora.fountain.test.util import AgoraGraph, PathGraph, compare_path_graphs
+cycle_0 = CycleGraph()
+cycle_0.add_step('test:Concept1', 'test:prop12')
+cycle_0.add_step('test:Concept2', 'test:prop21')
 
 
-class SimpleTwoConceptsGraphTest(FountainTest):
+class TwoConceptCycleGraphTest(FountainTest):
     def test_graph(self):
-        self.post_vocabulary('simple_two_concepts')
+        self.post_vocabulary('two_concept_cycle')
 
         expected_graph = AgoraGraph()
         expected_graph.add_types_from(['test:Concept1', 'test:Concept2'])
-        expected_graph.add_properties_from(['test:prop21'])
+        expected_graph.add_properties_from(['test:prop12', 'test:prop21'])
+        expected_graph.link_types('test:Concept1', 'test:prop12', 'test:Concept2')
         expected_graph.link_types('test:Concept2', 'test:prop21', 'test:Concept1')
 
         graph = self.graph
@@ -46,56 +49,44 @@ class SimpleTwoConceptsGraphTest(FountainTest):
 seed_uri = "http://localhost/seed"
 
 
-class SimpleTwoConceptsPropertyPathTest(FountainTest):
-    def a_test_self_seed(self):
-        self.post_vocabulary('simple_two_concepts')
-        self.post_seed("test:Concept2", seed_uri)
-        paths, all_cycles = self.get_paths("test:prop21")
-
-        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': []})
-        expected_graph.add_step('test:Concept2', 'test:prop21')
-
-        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
-
-
-class SimpleTwoConceptsSelfSeedPathsTest(FountainTest):
-    def a_test_self_seed(self):
-        self.post_vocabulary('simple_two_concepts')
+class TwoConceptCycleSelfSeedPathsTest(FountainTest):
+    def test_self_seed(self):
+        self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
         paths, all_cycles = self.get_paths("test:Concept1")
 
-        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': []})
+        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
+        expected_graph.set_cycle(0, cycle_0)
 
         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
 
-    def b_test_no_path(self):
-        c1_paths, _ = self.get_paths("test:Concept2")
-        eq_(len(c1_paths), 0, 'No path was expected')
 
-
-class SimpleTwoConceptsSeedlessPathsTest(FountainTest):
+class TwoConceptCycleSeedlessConceptPathsTest(FountainTest):
     def test_seedless_concept(self):
-        self.post_vocabulary('simple_two_concepts')
-        self.post_seed("test:Concept2", seed_uri)
-        paths, all_cycles = self.get_paths("test:Concept1")
+        self.post_vocabulary('two_concept_cycle')
+        self.post_seed("test:Concept1", seed_uri)
+        paths, all_cycles = self.get_paths("test:Concept2")
 
-        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': []})
-        expected_graph.add_step('test:Concept2', 'test:prop21')
+        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
+        expected_graph.add_step('test:Concept1', 'test:prop12')
+        expected_graph.set_cycle(0, cycle_0)
 
         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
 
 
-class SimpleTwoConceptsFullySeededPathsTest(FountainTest):
+class TwoConceptCycleFullySeededPathsTest(FountainTest):
     def test_fully_seeded(self):
-        self.post_vocabulary('simple_two_concepts')
+        self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
         self.post_seed("test:Concept2", seed_uri + '2')
-        paths, all_cycles = self.get_paths("test:Concept1")
+        paths, all_cycles = self.get_paths("test:Concept2")
 
-        expected_graph_1 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': []})
+        expected_graph_1 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
+        expected_graph_1.add_step('test:Concept1', 'test:prop12')
+        expected_graph_1.set_cycle(0, cycle_0)
 
-        expected_graph_2 = PathGraph(path={'seeds': [seed_uri + '2'], 'steps': [], 'cycles': []})
-        expected_graph_2.add_step('test:Concept2', 'test:prop21')
+        expected_graph_2 = PathGraph(path={'seeds': [seed_uri + '2'], 'steps': [], 'cycles': [0]})
+        expected_graph_2.set_cycle(0, cycle_0)
 
         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths],
                                    [expected_graph_1, expected_graph_2])

@@ -42,7 +42,7 @@ class DevelopmentConfig(Config):
         'db': 1,
         'port': 6379
     }
-    STORE = 'memory'
+    STORE = 'persist'
 
 
 class TestingConfig(Config):

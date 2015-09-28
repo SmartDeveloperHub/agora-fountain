@@ -24,22 +24,18 @@
 
 __author__ = 'Fernando Serena'
 
-from agora.fountain.test import FountainTest
-from agora.fountain.test.util import AgoraGraph, PathGraph, compare_path_graphs
+from agora.fountain.tests import FountainTest
+from agora.fountain.tests.util import AgoraGraph, PathGraph, compare_path_graphs
 
 
-class SimpleTwoAndSubclassGraphTest(FountainTest):
+class OneSubclassGraphTest(FountainTest):
     def test_graph(self):
         self.post_vocabulary('one_subclass')
-        self.post_vocabulary('simple_two_concepts')
 
         expected_graph = AgoraGraph()
-        expected_graph.add_types_from(['test:Concept1', 'test:SubConcept1', 'test:Concept2'])
+        expected_graph.add_types_from(['test:Concept1', 'test:SubConcept1'])
         expected_graph['test:SubConcept1']['super'] = ['test:Concept1']
         expected_graph['test:Concept1']['sub'] = ['test:SubConcept1']
-        expected_graph.add_properties_from(['test:prop21'])
-        expected_graph.link_types('test:Concept2', 'test:prop21', 'test:Concept1')
-        expected_graph.link_types('test:Concept2', 'test:prop21', 'test:SubConcept1')
 
         graph = self.graph
         assert graph == expected_graph
@@ -48,27 +44,42 @@ class SimpleTwoAndSubclassGraphTest(FountainTest):
 seed_uri = "http://localhost/seed"
 
 
-class SimpleTwoAndSubclassParentPathsTest(FountainTest):
+class OneSubclassParentSeedSelfPathsTest(FountainTest):
     def test_self_seed(self):
         self.post_vocabulary('one_subclass')
-        self.post_vocabulary('simple_two_concepts')
-        self.post_seed("test:Concept2", seed_uri)
+        self.post_seed("test:Concept1", seed_uri)
         paths, all_cycles = self.get_paths("test:Concept1")
 
         expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': []})
-        expected_graph.add_step('test:Concept2', 'test:prop21')
 
         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
 
 
-class SimpleTwoAndSubclassChildPathsTest(FountainTest):
+class OneSubclassParentSeedChildPathsTest(FountainTest):
     def test_self_seed(self):
         self.post_vocabulary('one_subclass')
-        self.post_vocabulary('simple_two_concepts')
-        self.post_seed("test:Concept2", seed_uri)
+        self.post_seed("test:Concept1", seed_uri)
+        paths, all_cycles = self.get_paths("test:SubConcept1")
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [])
+
+
+class OneSubclassChildSeedSelfPathsTest(FountainTest):
+    def test_self_seed(self):
+        self.post_vocabulary('one_subclass')
+        self.post_seed("test:SubConcept1", seed_uri)
         paths, all_cycles = self.get_paths("test:SubConcept1")
 
         expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': []})
-        expected_graph.add_step('test:Concept2', 'test:prop21')
+
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
+
+
+class OneSubclassChildSeedParentPathsTest(FountainTest):
+    def test_self_seed(self):
+        self.post_vocabulary('one_subclass')
+        self.post_seed("test:SubConcept1", seed_uri)
+        paths, all_cycles = self.get_paths("test:Concept1")
+
+        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': []})
 
         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])

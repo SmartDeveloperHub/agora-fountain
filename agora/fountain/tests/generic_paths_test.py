@@ -26,7 +26,7 @@ __author__ = 'Fernando Serena'
 
 from nose.tools import *
 
-from agora.fountain.test import FountainTest
+from agora.fountain.tests import FountainTest
 
 
 class SeedlessPathTest(FountainTest):
