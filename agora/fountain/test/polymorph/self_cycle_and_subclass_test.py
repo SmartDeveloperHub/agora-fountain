@@ -30,9 +30,6 @@ from agora.fountain.test.util import AgoraGraph, PathGraph, CycleGraph, compare_
 cycle_0 = CycleGraph()
 cycle_0.add_step('test:Concept1', 'test:prop11a')
 
-cycle_1 = CycleGraph()
-cycle_1.add_step('test:SubConcept1', 'test:prop11a')
-
 
 class SelfCycleAndSubclassGraphTest(FountainTest):
     def test_graph(self):
@@ -63,9 +60,8 @@ class SelfCycleAndSubclassChildPathsTest(FountainTest):
         self.post_seed("test:Concept1", seed_uri)
         paths, all_cycles = self.get_paths("test:SubConcept1")
 
-        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
+        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
         expected_graph.set_cycle(0, cycle_0)
-        expected_graph.set_cycle(1, cycle_1)
 
         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
 
@@ -77,8 +73,7 @@ class SelfCycleAndSubclassParentPathsTest(FountainTest):
         self.post_seed("test:Concept1", seed_uri)
         paths, all_cycles = self.get_paths("test:Concept1")
 
-        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
+        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
         expected_graph.set_cycle(0, cycle_0)
-        expected_graph.set_cycle(1, cycle_1)
 
         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
