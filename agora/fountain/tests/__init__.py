@@ -78,7 +78,7 @@ class FountainTest(unittest.TestCase):
         return self.get(path)
 
     def post_vocabulary(self, filename, exp_code=201):
-        with open('agora/fountain/test/vocabs/{}.ttl'.format(filename)) as f:
+        with open('agora/fountain/tests/vocabs/{}.ttl'.format(filename)) as f:
             vocab = f.read()
             response = self.post('/vocabs', vocab, message='The vocabulary was not created properly', exp_code=exp_code)
             if exp_code != 201:
