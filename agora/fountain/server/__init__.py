@@ -28,7 +28,7 @@ import os
 
 from flask import Flask
 
-config = os.environ.get('CONFIG', 'agora.fountain.server.config.DevelopmentConfig')
+config = os.environ.get('FOUNTAIN_CONFIG', 'agora.fountain.server.config.DevelopmentConfig')
 
 app = Flask(__name__)
 app.config.from_object(config)
