@@ -174,7 +174,7 @@ def get_types(vid=None):
                {?c a rdfs:Class}
                FILTER(isURI(?c))
              }
-             OPTIONAL
+             UNION
              {?c rdfs:subClassOf ?x FILTER(isURI(?x))}
            }""")
     classes_set = __flat_slice(q_class_result)
