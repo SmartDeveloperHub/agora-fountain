@@ -61,7 +61,7 @@ class ProductionConfig(Config):
     DEBUG = False
     LOG = logging.INFO
     REDIS = {
-        'host': 'localhost',
+        'host': 'redis',
         'db': 1,
         'port': 6379
     }
