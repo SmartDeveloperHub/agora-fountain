@@ -57,7 +57,15 @@ def __load_owl(owl):
     :return:
     """
     owl_g = Graph()
-    owl_g.parse(source=StringIO.StringIO(owl), format='turtle')
+    for f in ['turtle', 'xml']:
+        try:
+            owl_g.parse(source=StringIO.StringIO(owl), format=f)
+            break
+        except SyntaxError:
+            pass
+
+    if not len(owl_g):
+        raise VocabularyException()
 
     try:
         uri = list(owl_g.subjects(RDF.type, OWL.Ontology)).pop()

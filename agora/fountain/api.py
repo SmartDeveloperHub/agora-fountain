@@ -126,6 +126,8 @@ def add_vocabulary():
         raise APIError('Ontology URI not found')
     except vocs.DuplicateVocabulary, e:
         raise Conflict(e.message)
+    except vocs.VocabularyException, e:
+        raise APIError(e)
 
     __analyse_vocabularies(vids)
 
