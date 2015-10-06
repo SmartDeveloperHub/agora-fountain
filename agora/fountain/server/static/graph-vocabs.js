@@ -70,7 +70,7 @@ $(function () { // on dom ready
         maxSimulationTime: 4000, // max length in ms to run the layout
         fit: false, // on every layout reposition of nodes, fit the viewport
         padding: 30, // padding around the simulation
-        boundingBox: {x1: 0, y1: 0, w: 3000, h: 3000}, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
+        boundingBox: {x1: 0, y1: 0, w: vGraph.nodes.length * 150, h: vGraph.nodes.length * 150}, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
         ungrabifyWhileSimulating: false, // so you can't drag nodes during layout
 
         // callbacks on layout events
@@ -84,6 +84,7 @@ $(function () { // on dom ready
         gravity: true,
         fps: undefined,
         precision: 0.9,
+        maxNodeSpacing: 50,
 
         // static numbers or functions that dynamically return what these
         // values should be for each element
