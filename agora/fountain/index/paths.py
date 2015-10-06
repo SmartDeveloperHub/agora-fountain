@@ -323,8 +323,8 @@ def find_path(elm):
         cycles = [eval(index.r.zrangebyscore('cycles', c, c).pop()) for c in cycle_ids]
         sub_path = {'cycles': list(cycle_ids), 'seeds': _seeds, 'steps': sub_steps}
 
-        for cycle in sorted(cycles, key=lambda x: len(x), reverse=True):  # First filter bigger cycles
-            sub_steps = __detect_and_remove_cycles(cycle, sub_steps)
+        # for cycle in sorted(cycles, key=lambda x: len(x), reverse=True):  # First filter bigger cycles
+        #     sub_steps = __detect_and_remove_cycles(cycle, sub_steps)
         sub_path['steps'] = sub_steps
         if sub_path not in seed_paths:
             seed_paths.append(sub_path)
