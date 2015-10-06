@@ -101,7 +101,7 @@ def get_seeds():
 
     result_dict = collections.defaultdict(list)
     for t, uri in iterator():
-        result_dict[t].append(uri)
+        result_dict[t].append({"uri": uri, "id": base64.b64encode('{}|{}'.format(t, uri))})
     return result_dict
 
 
