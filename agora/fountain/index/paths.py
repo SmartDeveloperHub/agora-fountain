@@ -88,11 +88,6 @@ def __build_paths(node, root, steps=None, level=0, path_graph=None, cache=None):
     :return:
     """
 
-    def get_property(p):
-        if p not in cache:
-            cache[p] = index.get_property(p)
-        return cache[p]
-
     def contains_cycle(graph):
         return bool(list(nx.simple_cycles(graph)))
 
@@ -104,31 +99,26 @@ def __build_paths(node, root, steps=None, level=0, path_graph=None, cache=None):
     if cache is None:
         cache = {}
 
-    log.debug('[{}] building paths to {}, with root {} and {} previous steps'.format(level, node, root, len(steps)))
+    log.debug(
+        '[{}][{}] building paths to {}, with root {} and {} previous steps'.format(root, level, node, root, len(steps)))
 
     pred = set(pgraph.predecessors(node))
     for t in [x for x in pred]:
         new_path_graph = path_graph.copy()
         new_path_graph.add_nodes_from([t, node])
         new_path_graph.add_edges_from([(t, node)])
-        if contains_cycle(new_path_graph):
-            continue
 
         step = {'property': node, 'type': t}
         path = [step]
         new_steps = steps[:]
         new_steps.append(step)
-        log.debug('[{}] added a new step {} in the path to {}'.format(level, (t, node), node))
-
-        try:
-            node_inverse = get_property(node)['inverse']
-        except TypeError:
-            node_inverse = []
+        log.debug('[{}][{}] added a new step {} in the path to {}'.format(root, level, (t, node), node))
 
         any_subpath = False
-        next_steps = [x for x in pgraph.predecessors(t) if x != root and x not in node_inverse]
+        next_steps = [x for x in pgraph.predecessors(t)]
+
         for p in next_steps:
-            log.debug('[{}] following {} as a pred property of {}'.format(level, p, t))
+            log.debug('[{}][{}] following {} as a pred property of {}'.format(root, level, p, t))
             extended_new_path_graph = new_path_graph.copy()
             extended_new_path_graph.add_node(p)
             extended_new_path_graph.add_edges_from([(p, t)])
@@ -143,8 +133,10 @@ def __build_paths(node, root, steps=None, level=0, path_graph=None, cache=None):
         if (len(next_steps) and not any_subpath) or not len(next_steps):
             paths.append(path)
 
-    log.debug('[{}] returning {} paths to {}, with root {} and {} previous steps'.format(level, len(paths), node, root,
-                                                                                         len(steps)))
+    log.debug(
+        '[{}][{}] returning {} paths to {}, with root {} and {} previous steps'.format(root, level, len(paths), node,
+                                                                                       root,
+                                                                                       len(steps)))
     return paths
 
 
@@ -153,6 +145,7 @@ def calculate_paths():
 
     :return:
     """
+
     def __find_matching_cycles(_elm):
         for j, c in enumerate(g_cycles):
             extended_elm = [_elm]
@@ -225,7 +218,7 @@ def calculate_paths():
 
     node_paths = node_paths.items()
 
-    print 'preparing to persist the calculated paths...{}'.format(len(node_paths))
+    log.debug('preparing to persist the calculated paths...{}'.format(len(node_paths)))
 
     with index.r.pipeline() as pipe:
         pipe.multi()
@@ -273,22 +266,23 @@ def __lock_key_pattern(pattern):
         yield k, index.r.lock(k)
 
 
-def __detect_and_remove_cycles(cycle, steps):
+def __detect_redundancies(source, steps):
     """
 
     :param cycle:
     :param steps:
     :return:
     """
-    if cycle[0] in steps:
+
+    if source and source[0] in steps:
         steps_copy = steps[:]
-        start_index = steps_copy.index(cycle[0])
-        end_index = start_index + len(cycle)
+        start_index = steps_copy.index(source[0])
+        end_index = start_index + len(source)
         try:
             cand_cycle = steps_copy[start_index:end_index]
             if end_index >= len(steps_copy):
                 cand_cycle.extend(steps_copy[:end_index - len(steps_copy)])
-            if cand_cycle == cycle:
+            if cand_cycle == source:
                 steps_copy = steps[0:start_index - end_index + len(steps_copy)]
                 if len(steps) > end_index:
                     steps_copy += steps[end_index:]
@@ -311,7 +305,7 @@ def find_path(elm):
             seed_av[ty] = seeds.get_type_seeds(ty)
         return seed_av[ty]
 
-    def filter_path_cycles(_seeds):
+    def build_seed_path_and_identify_cycles(_seeds):
         """
 
         :param _seeds:
@@ -320,12 +314,8 @@ def find_path(elm):
         sub_steps = list(reversed(path[:step_index + 1]))
         for _step in sub_steps:
             cycle_ids.update([int(c) for c in index.r.smembers('cycles:{}'.format(_step.get('type')))])
-        cycles = [eval(index.r.zrangebyscore('cycles', c, c).pop()) for c in cycle_ids]
         sub_path = {'cycles': list(cycle_ids), 'seeds': _seeds, 'steps': sub_steps}
 
-        # for cycle in sorted(cycles, key=lambda x: len(x), reverse=True):  # First filter bigger cycles
-        #     sub_steps = __detect_and_remove_cycles(cycle, sub_steps)
-        sub_path['steps'] = sub_steps
         if sub_path not in seed_paths:
             seed_paths.append(sub_path)
         return cycle_ids
@@ -342,19 +332,26 @@ def find_path(elm):
             ty = step.get('type')
             type_seeds = check_seed_availability(ty)
             if len(type_seeds):
-                seed_cycles = filter_path_cycles(type_seeds)
+                seed_cycles = build_seed_path_and_identify_cycles(type_seeds)
                 applying_cycles = applying_cycles.union(set(seed_cycles))
 
     # It only returns seeds if elm is a type and there are seeds of it
     req_type_seeds = check_seed_availability(elm)
     if len(req_type_seeds):
         path = []
-        seed_cycles = filter_path_cycles(req_type_seeds)
+        seed_cycles = build_seed_path_and_identify_cycles(req_type_seeds)
         applying_cycles = applying_cycles.union(set(seed_cycles))
+
+    filtered_seed_paths = []
+    for seed_path in seed_paths:
+        for sp in [_ for _ in seed_paths if _ != seed_path and _['seeds'] == seed_path['seeds']]:
+            if __detect_redundancies(sp["steps"], seed_path["steps"]) != seed_path['steps']:
+                filtered_seed_paths.append(seed_path)
+                break
 
     applying_cycles = [{'cycle': int(cid), 'steps': eval(index.r.zrange('cycles', cid, cid).pop())} for cid in
                        applying_cycles]
-    return list(seed_paths), applying_cycles
+    return [_ for _ in seed_paths if _ not in filtered_seed_paths], applying_cycles
 
 
 # Build the current graph on import
