@@ -27,8 +27,11 @@ __author__ = 'Fernando Serena'
 
 import logging
 from agora.fountain.server import app
+import os
 
-log_level = app.config['LOG']
+log_level = os.environ.get('LOG_LEVEL')
+if log_level is None:
+    log_level = app.config['LOG']
 
 logger = logging.getLogger('apscheduler')
 ch = logging.StreamHandler()
@@ -44,7 +47,7 @@ logger.setLevel(log_level)
 
 from agora.fountain import api
 
-app.logger.info('Listening!')
+app.logger.info('Ready')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=app.config['PORT'], debug=True, use_reloader=False)
