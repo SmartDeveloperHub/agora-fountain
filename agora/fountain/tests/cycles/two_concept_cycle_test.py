@@ -55,10 +55,16 @@ class TwoConceptCycleSelfSeedPathsTest(FountainTest):
         self.post_seed("test:Concept1", seed_uri)
         paths, all_cycles = self.get_paths("test:Concept1")
 
-        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
-        expected_graph.set_cycle(0, cycle_0)
+        expected_graph_1 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
+        expected_graph_1.set_cycle(0, cycle_0)
 
-        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
+        expected_graph_2 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
+        expected_graph_2.add_step('test:Concept1', 'test:prop12')
+        expected_graph_2.add_step('test:Concept2', 'test:prop21')
+        expected_graph_2.set_cycle(0, cycle_0)
+
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths],
+                                   [expected_graph_1, expected_graph_2])
 
 
 class TwoConceptCycleSeedlessConceptPathsTest(FountainTest):
@@ -85,8 +91,13 @@ class TwoConceptCycleFullySeededPathsTest(FountainTest):
         expected_graph_1.add_step('test:Concept1', 'test:prop12')
         expected_graph_1.set_cycle(0, cycle_0)
 
-        expected_graph_2 = PathGraph(path={'seeds': [seed_uri + '2'], 'steps': [], 'cycles': [0]})
-        expected_graph_2.set_cycle(0, cycle_0)
+        expected_graph_2a = PathGraph(path={'seeds': [seed_uri + '2'], 'steps': [], 'cycles': [0]})
+        expected_graph_2a.set_cycle(0, cycle_0)
+
+        expected_graph_2b = PathGraph(path={'seeds': [seed_uri + '2'], 'steps': [], 'cycles': [0]})
+        expected_graph_2b.add_step('test:Concept2', 'test:prop21')
+        expected_graph_2b.add_step('test:Concept1', 'test:prop12')
+        expected_graph_2b.set_cycle(0, cycle_0)
 
         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths],
-                                   [expected_graph_1, expected_graph_2])
+                                   [expected_graph_1, expected_graph_2a, expected_graph_2b])

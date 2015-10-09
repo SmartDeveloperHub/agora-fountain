@@ -34,20 +34,20 @@ cycle_1.add_step('test:Concept1', 'test:prop12')
 cycle_1.add_step('test:Concept2', 'test:prop21')
 
 
-class SelfAndTwoConceptCycleGraphTest(FountainTest):
-    def test_graph(self):
-        self.post_vocabulary('two_concept_cycle')
-        self.post_vocabulary('self_cycle')
-
-        expected_graph = AgoraGraph()
-        expected_graph.add_types_from(['test:Concept1', 'test:Concept2'])
-        expected_graph.add_properties_from(['test:prop11a', 'test:prop12', 'test:prop21'])
-        expected_graph.link_types('test:Concept1', 'test:prop11a', 'test:Concept1')
-        expected_graph.link_types('test:Concept1', 'test:prop12', 'test:Concept2')
-        expected_graph.link_types('test:Concept2', 'test:prop21', 'test:Concept1')
-
-        graph = self.graph
-        assert graph == expected_graph
+# class SelfAndTwoConceptCycleGraphTest(FountainTest):
+#     def test_graph(self):
+#         self.post_vocabulary('two_concept_cycle')
+#         self.post_vocabulary('self_cycle')
+#
+#         expected_graph = AgoraGraph()
+#         expected_graph.add_types_from(['test:Concept1', 'test:Concept2'])
+#         expected_graph.add_properties_from(['test:prop11a', 'test:prop12', 'test:prop21'])
+#         expected_graph.link_types('test:Concept1', 'test:prop11a', 'test:Concept1')
+#         expected_graph.link_types('test:Concept1', 'test:prop12', 'test:Concept2')
+#         expected_graph.link_types('test:Concept2', 'test:prop21', 'test:Concept1')
+#
+#         graph = self.graph
+#         assert graph == expected_graph
 
 
 seed_uri = "http://localhost/seed"
@@ -60,11 +60,23 @@ class SelfAndTwoConceptCycleSelfSeedPathsTest(FountainTest):
         self.post_seed("test:Concept1", seed_uri)
         paths, all_cycles = self.get_paths("test:Concept1")
 
-        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
-        expected_graph.set_cycle(0, cycle_0)
-        expected_graph.set_cycle(1, cycle_1)
+        expected_graph_1 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
+        expected_graph_1.set_cycle(0, cycle_0)
+        expected_graph_1.set_cycle(1, cycle_1)
 
-        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
+        expected_graph_2 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
+        expected_graph_2.add_step('test:Concept1', 'test:prop11a')
+        expected_graph_2.set_cycle(0, cycle_0)
+        expected_graph_2.set_cycle(1, cycle_1)
+
+        expected_graph_3 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
+        expected_graph_3.add_step('test:Concept1', 'test:prop12')
+        expected_graph_3.add_step('test:Concept2', 'test:prop21')
+        expected_graph_3.set_cycle(0, cycle_0)
+        expected_graph_3.set_cycle(1, cycle_1)
+
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths],
+                                   [expected_graph_1, expected_graph_2, expected_graph_3])
 
 
 class SelfAndTwoConceptCycleSeedlessConceptPathsTest(FountainTest):
@@ -95,9 +107,15 @@ class SelfAndTwoConceptCycleFullySeededPathsTest(FountainTest):
         expected_graph_1.set_cycle(0, cycle_0)
         expected_graph_1.set_cycle(1, cycle_1)
 
-        expected_graph_2 = PathGraph(path={'seeds': [seed_uri + '2'], 'steps': [], 'cycles': [0, 1]})
-        expected_graph_2.set_cycle(0, cycle_0)
-        expected_graph_2.set_cycle(1, cycle_1)
+        expected_graph_2a = PathGraph(path={'seeds': [seed_uri + '2'], 'steps': [], 'cycles': [0, 1]})
+        expected_graph_2a.set_cycle(0, cycle_0)
+        expected_graph_2a.set_cycle(1, cycle_1)
+
+        expected_graph_2b = PathGraph(path={'seeds': [seed_uri + '2'], 'steps': [], 'cycles': [0, 1]})
+        expected_graph_2b.add_step('test:Concept2', 'test:prop21')
+        expected_graph_2b.add_step('test:Concept1', 'test:prop12')
+        expected_graph_2b.set_cycle(0, cycle_0)
+        expected_graph_2b.set_cycle(1, cycle_1)
 
         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths],
-                                   [expected_graph_1, expected_graph_2])
+                                   [expected_graph_1, expected_graph_2a, expected_graph_2b])

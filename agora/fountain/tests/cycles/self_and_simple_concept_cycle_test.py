@@ -56,10 +56,15 @@ class SelfAndSimpleConceptCycleSelfSeedPathsTest(FountainTest):
         self.post_seed("test:Concept2", seed_uri)
         c1_paths, all_cycles = self.get_paths("test:Concept2")
 
-        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
-        expected_graph.set_cycle(0, cycle_0)
+        expected_graph_1 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
+        expected_graph_1.set_cycle(0, cycle_0)
 
-        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in c1_paths], [expected_graph])
+        expected_graph_2 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]})
+        expected_graph_2.add_step('test:Concept2', 'test:prop22')
+        expected_graph_2.set_cycle(0, cycle_0)
+
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in c1_paths],
+                                   [expected_graph_1, expected_graph_2])
 
 
 class SelfAndSimpleConceptCycleSeedlessConceptPathsTest(FountainTest):

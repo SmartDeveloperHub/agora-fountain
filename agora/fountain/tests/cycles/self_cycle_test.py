@@ -22,10 +22,13 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
+from agora.fountain.tests import FountainTest
+from agora.fountain.tests.util import AgoraGraph, PathGraph, compare_path_graphs, CycleGraph
+
 __author__ = 'Fernando Serena'
 
-from agora.fountain.tests import FountainTest
-from agora.fountain.tests.util import AgoraGraph, PathGraph, compare_path_graphs
+cycle_0 = CycleGraph()
+cycle_0.add_step('test:Concept1', 'test:prop11a')
 
 
 class SelfCycleGraphTest(FountainTest):
@@ -50,8 +53,14 @@ class SelfCyclePathsTest(FountainTest):
         self.post_seed("test:Concept1", seed_uri)
         paths, all_cycles = self.get_paths("test:Concept1")
 
-        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]},
-                                   cycles=[{'cycle': 0, 'steps': []}])
-        expected_graph.get_cycle(0).add_step('test:Concept1', 'test:prop11a')
+        expected_graph_1 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]},
+                                     cycles=[{'cycle': 0, 'steps': []}])
+        expected_graph_1.get_cycle(0).add_step('test:Concept1', 'test:prop11a')
 
-        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
+        expected_graph_2 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0]},
+                                     cycles=[{'cycle': 0, 'steps': []}])
+        expected_graph_2.add_step('test:Concept1', 'test:prop11a')
+        expected_graph_2.get_cycle(0).add_step('test:Concept1', 'test:prop11a')
+
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths],
+                                   [expected_graph_1, expected_graph_2])

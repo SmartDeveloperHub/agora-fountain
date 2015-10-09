@@ -45,7 +45,8 @@ class KnownSeedTest(FountainTest):
         seeds = self.seeds
         assert 'test:Concept1' in seeds, '%s should be the only seed type'
         c1_seeds = seeds['test:Concept1']
-        assert len(c1_seeds) == 1 and seed_uri in c1_seeds, '%s should be the only seed available' % seed_uri
+        assert len(c1_seeds) == 1 and seed_uri in c1_seeds.pop()[
+            'uri'], '%s should be the only seed available' % seed_uri
 
 
 class DuplicateSeedTest(FountainTest):
@@ -60,7 +61,7 @@ class ClearSeedTest(FountainTest):
         self.post_vocabulary('two_concept_cycle')
         self.post_seed("test:Concept1", seed_uri)
         vocabs = self.get_vocabularies()
-        self.delete_vocabulary(vocabs[vocabs.keys().pop()])  # It assumes it contains only one
+        self.delete_vocabulary(vocabs[vocabs.keys().pop()])  # Assumes it contains only one
         seeds = self.seeds
         eq_(len(seeds), 0, 'No seed should be kept')
 
@@ -75,11 +76,8 @@ class TwoTypesSeedTest(FountainTest):
         seeds = self.seeds
         assert c1 in seeds and c2 in seeds, '%s and %s should be the two seed types' % (c1, c2)
         c1_seeds = seeds['test:Concept1']
-        assert len(c1_seeds) == 1 and seed_uri in c1_seeds, '%s should be the only seed available of type %s' % (
-            seed_uri, c1)
         c2_seeds = seeds['test:Concept2']
-        assert len(c2_seeds) == 1 and seed_uri + '2' in c2_seeds, '%s should be the only seed available of type %s' % (
-            seed_uri, c2)
+        assert len(c1_seeds) == 1 and len(c2_seeds) == 1
 
 
 class MultipleSeedsOfSameTypeTest(FountainTest):
@@ -91,10 +89,7 @@ class MultipleSeedsOfSameTypeTest(FountainTest):
         seeds = self.seeds
         assert c1 in seeds, '%s should be the only seed type' % c1
         c1_seeds = seeds[c1]
-        assert len(
-            c1_seeds) == 2 and seed_uri in c1_seeds and seed_uri + '2' in c1_seeds, \
-            '%s and %s should be the only seeds available of type %s' % (
-                seed_uri, seed_uri + '2', c1)
+        assert len(c1_seeds) == 2
 
 
 class SeedsByTypeTest(FountainTest):

@@ -63,11 +63,25 @@ class TwoInThreeConceptCycleSelfSeedPathsTest(FountainTest):
         self.post_seed("test:Concept1", seed_uri)
         paths, all_cycles = self.get_paths("test:Concept1")
 
-        expected_graph = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
-        expected_graph.set_cycle(0, cycle_0)
-        expected_graph.set_cycle(1, cycle_1)
+        expected_graph_1 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
+        expected_graph_1.set_cycle(0, cycle_0)
+        expected_graph_1.set_cycle(1, cycle_1)
 
-        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths], [expected_graph])
+        expected_graph_2 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
+        expected_graph_2.set_cycle(0, cycle_0)
+        expected_graph_2.set_cycle(1, cycle_1)
+        expected_graph_2.add_step('test:Concept1', 'test:prop12')
+        expected_graph_2.add_step('test:Concept2', 'test:prop23')
+        expected_graph_2.add_step('test:Concept3', 'test:prop31')
+
+        expected_graph_3 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
+        expected_graph_3.set_cycle(0, cycle_0)
+        expected_graph_3.set_cycle(1, cycle_1)
+        expected_graph_3.add_step('test:Concept1', 'test:prop12')
+        expected_graph_3.add_step('test:Concept2', 'test:prop21')
+
+        assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in paths],
+                                   [expected_graph_1, expected_graph_2, expected_graph_3])
 
 
 class TwoInThreeConceptCycleConcept2PathsTest(FountainTest):
@@ -139,9 +153,22 @@ class TwoInThreeConceptCycleFullySeededPathsTest(FountainTest):
         self.post_seed("test:Concept1", seed_uri)
         c1_paths, all_cycles = self.get_paths('test:Concept1')
 
-        expected_graph_1 = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
-        expected_graph_1.set_cycle(0, cycle_0)
-        expected_graph_1.set_cycle(1, cycle_1)
+        expected_graph_1a = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
+        expected_graph_1a.set_cycle(0, cycle_0)
+        expected_graph_1a.set_cycle(1, cycle_1)
+
+        expected_graph_1b = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
+        expected_graph_1b.add_step('test:Concept1', 'test:prop12')
+        expected_graph_1b.add_step('test:Concept2', 'test:prop23')
+        expected_graph_1b.add_step('test:Concept3', 'test:prop31')
+        expected_graph_1b.set_cycle(0, cycle_0)
+        expected_graph_1b.set_cycle(1, cycle_1)
+
+        expected_graph_1c = PathGraph(path={'seeds': [seed_uri], 'steps': [], 'cycles': [0, 1]})
+        expected_graph_1c.add_step('test:Concept1', 'test:prop12')
+        expected_graph_1c.add_step('test:Concept2', 'test:prop21')
+        expected_graph_1c.set_cycle(0, cycle_0)
+        expected_graph_1c.set_cycle(1, cycle_1)
 
         expected_graph_2a = PathGraph(path={'seeds': [seed_uri + '2'], 'steps': [], 'cycles': [0, 1]})
         expected_graph_2a.add_step('test:Concept2', 'test:prop21')
@@ -159,6 +186,7 @@ class TwoInThreeConceptCycleFullySeededPathsTest(FountainTest):
         expected_graph_3.set_cycle(0, cycle_0)
         expected_graph_3.set_cycle(1, cycle_1)
 
-        expected_graphs = [expected_graph_1, expected_graph_2a, expected_graph_2b, expected_graph_3]
+        expected_graphs = [expected_graph_1a, expected_graph_1b, expected_graph_1c, expected_graph_2a,
+                           expected_graph_2b, expected_graph_3]
 
         assert compare_path_graphs([PathGraph(path=path, cycles=all_cycles) for path in c1_paths], expected_graphs)
