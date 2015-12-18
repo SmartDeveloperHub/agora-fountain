@@ -22,37 +22,40 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
+import os
+import logging
+
 __author__ = 'Fernando Serena'
 
-import logging
+
+def _api_port():
+    return int(os.environ.get('FOUNTAIN_API_PORT', 5002))
+
+
+def _redis_conf(def_host, def_db, def_port):
+    return {'host': os.environ.get('FOUNTAIN_DB_HOST', def_host),
+            'db': os.environ.get('FOUNTAIN_DB_DB', def_db),
+            'port': os.environ.get('FOUNTAIN_DB_PORT', def_port)}
 
 
 class Config(object):
     STORE_PATHS = {
         'graph': 'graph_store'
     }
-    PORT = 5002
+    PORT = _api_port()
 
 
 class DevelopmentConfig(Config):
     DEBUG = True
     LOG = logging.DEBUG
-    REDIS = {
-        'host': 'localhost',
-        'db': 1,
-        'port': 6379
-    }
+    REDIS = _redis_conf('localhost', 1, 6379)
     STORE = 'persist'
 
 
 class TestingConfig(Config):
     DEBUG = False
     LOG = logging.DEBUG
-    REDIS = {
-        'host': 'localhost',
-        'db': 2,
-        'port': 6379
-    }
+    REDIS = _redis_conf('localhost', 2, 6379)
     TESTING = True
     STORE = 'memory'
 
@@ -60,9 +63,5 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     LOG = logging.INFO
-    REDIS = {
-        'host': 'redis',
-        'db': 1,
-        'port': 6379
-    }
+    REDIS = _redis_conf('redis', 1, 6379)
     STORE = 'persist'
