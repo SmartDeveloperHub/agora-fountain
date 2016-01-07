@@ -370,7 +370,7 @@ def get_type(ty):
     try:
         all_type_keys = r.keys('*:types')
         if not filter(lambda k: r.sismember(k, ty), all_type_keys):
-            raise TypeError('Unknown type')
+            raise TypeError('Unknown type: {}'.format(ty))
 
         super_types = reduce(set.union, __get_by_pattern('*:types:{}:super'.format(ty), r.smembers), set([]))
         sub_types = reduce(set.union, __get_by_pattern('*:types:{}:sub'.format(ty), r.smembers), set([]))
