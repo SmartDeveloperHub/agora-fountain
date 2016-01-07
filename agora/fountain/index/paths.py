@@ -38,7 +38,7 @@ log = logging.getLogger('agora.fountain.paths')
 
 pgraph = nx.DiGraph()
 match_elm_cycles = {}
-
+th_pool = ThreadPoolExecutor(multiprocessing.cpu_count())
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -75,7 +75,7 @@ def __build_directed_graph(generic=False, graph=None):
         graph.add_edges_from(edges)
         graph.add_node(node, ty='prop', object=p_dict.get('type') == 'object', range=ran)
 
-    print 'graph', list(graph.edges())
+    log.info('Known graph: {}'.format(list(graph.edges())))
     return graph
 
 
@@ -206,11 +206,10 @@ def calculate_paths():
 
     node_paths = {}
     futures = []
-    with ThreadPoolExecutor(multiprocessing.cpu_count()) as th_pool:
-        for node, data in pgraph.nodes(data=True):
-            futures.append(th_pool.submit(__calculate_node_paths, node, data))
-        wait(futures, timeout=None, return_when=ALL_COMPLETED)
-        th_pool.shutdown()
+    for node, data in pgraph.nodes(data=True):
+        futures.append(th_pool.submit(__calculate_node_paths, node, data))
+    wait(futures, timeout=None, return_when=ALL_COMPLETED)
+    # th_pool.shutdown()
 
     for ty in [_ for _ in index.get_types() if _ in node_paths]:
         for sty in [_ for _ in index.get_type(ty)['sub'] if _ in node_paths]:
@@ -222,21 +221,21 @@ def calculate_paths():
 
     with index.r.pipeline() as pipe:
         pipe.multi()
-        with ThreadPoolExecutor(multiprocessing.cpu_count()) as th_pool:
-            for (elm, paths) in node_paths:
-                futures = []
-                for (i, path) in enumerate(paths):
-                    futures.append(th_pool.submit(__store_path, i, path))
-                    for step in path:
-                        step_ty = step.get('type')
-                        if step_ty not in match_elm_cycles:
-                            match_elm_cycles[step_ty] = __find_matching_cycles(step_ty)
-                        step_pr = step.get('property')
-                        if step_pr not in match_elm_cycles:
-                            match_elm_cycles[step_pr] = __find_matching_cycles(step_pr)
-                wait(futures, timeout=None, return_when=ALL_COMPLETED)
-                pipe.execute()
-            th_pool.shutdown()
+        # with ThreadPoolExecutor(multiprocessing.cpu_count()) as th_pool:
+        for (elm, paths) in node_paths:
+            futures = []
+            for (i, path) in enumerate(paths):
+                futures.append(th_pool.submit(__store_path, i, path))
+                for step in path:
+                    step_ty = step.get('type')
+                    if step_ty not in match_elm_cycles:
+                        match_elm_cycles[step_ty] = __find_matching_cycles(step_ty)
+                    step_pr = step.get('property')
+                    if step_pr not in match_elm_cycles:
+                        match_elm_cycles[step_pr] = __find_matching_cycles(step_pr)
+            wait(futures, timeout=None, return_when=ALL_COMPLETED)
+            pipe.execute()
+        # th_pool.shutdown()
 
         # Store type and property cycles
         for elm in match_elm_cycles.keys():
