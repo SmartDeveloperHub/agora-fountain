@@ -22,13 +22,18 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
-__author__ = 'Fernando Serena'
-
 import os
-
 from flask import Flask
+import pprint
+from StringIO import StringIO
+
+
+__author__ = 'Fernando Serena'
 
 config = os.environ.get('FOUNTAIN_CONFIG', 'agora.fountain.server.config.DevelopmentConfig')
 
 app = Flask(__name__)
 app.config.from_object(config)
+out = StringIO()
+pprint.pprint(dict(app.config), stream=out)
+app.logger.info("""Fountain created!\n{}""".format(out.getvalue()))
