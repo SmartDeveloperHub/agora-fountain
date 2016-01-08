@@ -21,20 +21,21 @@
   limitations under the License.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
-from redis.exceptions import RedisError, BusyLoadingError
-
-__author__ = 'Fernando Serena'
+import logging
+import multiprocessing
+import sys
+from datetime import datetime as dt
 
 import redis
+from concurrent.futures.thread import ThreadPoolExecutor
+from redis.exceptions import RedisError, BusyLoadingError
+
+import agora.fountain.vocab.onto as vocs
 import agora.fountain.vocab.schema as sch
 from agora.fountain.exceptions import FountainError
-import agora.fountain.vocab.onto as vocs
-from datetime import datetime as dt
-from concurrent.futures.thread import ThreadPoolExecutor
-import logging
 from agora.fountain.server import app
-import sys
-import multiprocessing
+
+__author__ = 'Fernando Serena'
 
 log = logging.getLogger('agora.fountain.index')
 
@@ -67,6 +68,7 @@ def __get_by_pattern(pattern, func):
     :param func:
     :return:
     """
+
     def get_all():
         for k in pkeys:
             yield func(k)
@@ -147,6 +149,7 @@ def __extract_property(p, vid):
     :param vid:
     :return:
     """
+
     def p_type():
         if sch.is_object_property(p):
             return 'object'
@@ -218,7 +221,8 @@ def __extract_properties(vid):
         o_types = [t for t in get_types(ovid)]
         for oty in o_types:
             o_type = get_type(oty)
-            if set.intersection(properties, o_type.get('refs')) or set.intersection(properties, o_type.get('properties')):
+            if set.intersection(properties, o_type.get('refs')) or set.intersection(properties,
+                                                                                    o_type.get('properties')):
                 dependent_types.add((ovid, oty))
 
     futures = []
@@ -272,6 +276,7 @@ def get_types(vid=None):
     :param vid:
     :return:
     """
+
     def shared_type(t):
         return any(filter(lambda k: r.sismember(k, t), all_type_keys))
 
@@ -290,6 +295,7 @@ def get_properties(vid=None):
     :param vid:
     :return:
     """
+
     def shared_property(t):
         return any(filter(lambda k: r.sismember(k, t), all_prop_keys))
 
@@ -308,6 +314,7 @@ def get_property(prop):
     :param prop:
     :return:
     """
+
     def get_inverse_domain(ip):
         return reduce(set.union, __get_by_pattern('*:properties:{}:_domain'.format(ip), r.smembers), set([]))
 

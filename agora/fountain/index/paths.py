@@ -22,23 +22,24 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
-__author__ = 'Fernando Serena'
-
 import logging
-from datetime import datetime as dt
 import multiprocessing
+from datetime import datetime as dt
 
-from concurrent.futures.thread import ThreadPoolExecutor
-from concurrent.futures import wait, ALL_COMPLETED
 import networkx as nx
+from concurrent.futures import wait, ALL_COMPLETED
+from concurrent.futures.thread import ThreadPoolExecutor
 
 from agora.fountain.index import core as index, seeds
+
+__author__ = 'Fernando Serena'
 
 log = logging.getLogger('agora.fountain.paths')
 
 pgraph = nx.DiGraph()
 match_elm_cycles = {}
 th_pool = ThreadPoolExecutor(multiprocessing.cpu_count())
+
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -100,7 +101,8 @@ def __build_paths(node, root, steps=None, level=0, path_graph=None, cache=None):
         cache = {}
 
     log.debug(
-        '[{}][{}] building paths to {}, with root {} and {} previous steps'.format(root, level, node, root, len(steps)))
+            '[{}][{}] building paths to {}, with root {} and {} previous steps'.format(root, level, node, root,
+                                                                                       len(steps)))
 
     pred = set(pgraph.predecessors(node))
     for t in [x for x in pred]:
@@ -134,9 +136,10 @@ def __build_paths(node, root, steps=None, level=0, path_graph=None, cache=None):
             paths.append(path)
 
     log.debug(
-        '[{}][{}] returning {} paths to {}, with root {} and {} previous steps'.format(root, level, len(paths), node,
-                                                                                       root,
-                                                                                       len(steps)))
+            '[{}][{}] returning {} paths to {}, with root {} and {} previous steps'.format(root, level, len(paths),
+                                                                                           node,
+                                                                                           root,
+                                                                                           len(steps)))
     return paths
 
 

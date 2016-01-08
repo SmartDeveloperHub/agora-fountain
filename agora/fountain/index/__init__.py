@@ -22,7 +22,7 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
-__author__ = 'Fernando Serena'
-
 from agora.fountain.index import core
 from agora.fountain.index import paths
+
+__author__ = 'Fernando Serena'

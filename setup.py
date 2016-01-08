@@ -22,26 +22,27 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
-__author__ = 'Fernando Serena'
-
 from setuptools import setup, find_packages
 
+__author__ = 'Fernando Serena'
+
 setup(
-    name="Agora-Fountain",
-    version="0.5.1-alpha1",
-    author="Fernando Serena",
-    author_email="fernando.serena@centeropenmiddleware.com",
-    description="The Agora core service for ontology paths discovery and seed management",
-    license="Apache 2",
-    keywords=["linked-data", "ontology", "path"],
-    url="https://github.com/smartdeveloperhub/agora-fountain",
-    download_url="https://github.com/smartdeveloperhub/agora-fountain/tarball/0.5.1-alpha1",
-    packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
-    namespace_packages=['agora.fountain'],
-    install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'APScheduler', 'rdflib', 'networkx', 'futures',
-                      'rfc3987'],
-    classifiers=[],
-    scripts=['fountain'],
-    package_dir={'agora.fountain': 'agora/fountain', 'agora.fountain.server': 'agora/fountain/server'},
-    package_data={'agora.fountain.server': ['templates/*.*', 'static/*.*']},
+        name="Agora-Fountain",
+        version="0.5.1-alpha2",
+        author="Fernando Serena",
+        author_email="fernando.serena@centeropenmiddleware.com",
+        description="The Agora core service for ontology paths discovery and seed management",
+        license="Apache 2",
+        keywords=["linked-data", "ontology", "path"],
+        url="https://github.com/smartdeveloperhub/agora-fountain",
+        download_url="https://github.com/smartdeveloperhub/agora-fountain/tarball/0.5.1-alpha1",
+        packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
+        namespace_packages=['agora.fountain'],
+        install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'APScheduler', 'rdflib', 'networkx',
+                          'futures',
+                          'rfc3987'],
+        classifiers=[],
+        scripts=['fountain'],
+        package_dir={'agora.fountain': 'agora/fountain', 'agora.fountain.server': 'agora/fountain/server'},
+        package_data={'agora.fountain.server': ['templates/*.*', 'static/*.*']},
 )

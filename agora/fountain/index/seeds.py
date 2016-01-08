@@ -22,13 +22,13 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
-__author__ = 'Fernando Serena'
-
 import base64
 
-from agora.fountain.index.core import r
-from agora.fountain.index import core as index
 from agora.fountain.exceptions import FountainError
+from agora.fountain.index import core as index
+from agora.fountain.index.core import r
+
+__author__ = 'Fernando Serena'
 
 
 class TypeNotAvailableError(FountainError):

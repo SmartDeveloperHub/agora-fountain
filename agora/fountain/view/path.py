@@ -22,11 +22,11 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
-__author__ = 'Fernando Serena'
-
 import base64
 
 from agora.fountain.index import core as index
+
+__author__ = 'Fernando Serena'
 
 
 def view_path(elm, paths):
@@ -54,9 +54,9 @@ def view_path(elm, paths):
             nodes.append(node_d)
             if last_node is not None and (last_node, last_prop, ty) not in mem_edges:
                 edges.append(
-                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
-                              'label': last_prop + '\n\n\n',
-                              'target': base64.b16encode(ty)}})
+                        {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
+                                  'label': last_prop + '\n\n\n',
+                                  'target': base64.b16encode(ty)}})
                 mem_edges.add((last_node, last_prop, ty))
             last_node = ty
             last_prop = prop
@@ -66,9 +66,9 @@ def view_path(elm, paths):
                                    'width': len(elm) * 10}, 'classes': 'end'})
             if (last_node, last_prop, elm) not in mem_edges:
                 edges.append(
-                    {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
-                              'label': last_prop + '\n\n\n',
-                              'target': base64.b16encode(elm)}})
+                        {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
+                                  'label': last_prop + '\n\n\n',
+                                  'target': base64.b16encode(elm)}})
                 mem_edges.add((last_node, last_prop, elm))
         else:
             prop = index.get_property(elm)
@@ -84,9 +84,9 @@ def view_path(elm, paths):
                                        'width': len(elm) * 10}})
                 if (last_node, elm, r) not in mem_edges:
                     edges.append(
-                        {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
-                                  'label': elm + '\n\n',
-                                  'target': base64.b16encode(r)}, 'classes': 'end'})
+                            {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
+                                      'label': elm + '\n\n',
+                                      'target': base64.b16encode(r)}, 'classes': 'end'})
                     mem_edges.add((last_node, elm, r))
 
     return nodes, edges, list(roots)

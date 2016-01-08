@@ -22,9 +22,9 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
-__author__ = 'Fernando Serena'
-
 import pkg_resources
+
+__author__ = 'Fernando Serena'
 
 try:
     pkg_resources.declare_namespace(__name__)

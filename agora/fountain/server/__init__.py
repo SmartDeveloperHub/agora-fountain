@@ -23,10 +23,10 @@
 """
 
 import os
-from flask import Flask
 import pprint
 from StringIO import StringIO
 
+from flask import Flask
 
 __author__ = 'Fernando Serena'
 

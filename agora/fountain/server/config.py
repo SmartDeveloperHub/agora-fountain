@@ -22,8 +22,8 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
-import os
 import logging
+import os
 
 __author__ = 'Fernando Serena'
 

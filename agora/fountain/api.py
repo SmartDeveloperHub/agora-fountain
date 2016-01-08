@@ -22,21 +22,21 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
-__author__ = 'Fernando Serena'
-
 import json
 
 from flask import make_response, request, jsonify, render_template, url_for
 from flask_negotiate import consumes
 
-from agora.fountain.vocab.schema import prefixes
 import agora.fountain.index.core as index
 import agora.fountain.index.seeds as seeds
-from agora.fountain.view.path import view_path
-from agora.fountain.view.graph import view_graph
-from agora.fountain.index.paths import calculate_paths, find_path
 import agora.fountain.vocab.onto as vocs
+from agora.fountain.index.paths import calculate_paths, find_path
 from agora.fountain.server import app
+from agora.fountain.view.graph import view_graph
+from agora.fountain.view.path import view_path
+from agora.fountain.vocab.schema import prefixes
+
+__author__ = 'Fernando Serena'
 
 
 class APIError(Exception):

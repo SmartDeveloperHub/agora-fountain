@@ -22,14 +22,14 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
-__author__ = 'Fernando Serena'
-
 import base64
 import itertools
 
 from agora.fountain.index import core as index
-from agora.fountain.index.paths import pgraph
 from agora.fountain.index import seeds
+from agora.fountain.index.paths import pgraph
+
+__author__ = 'Fernando Serena'
 
 
 def view_graph():
@@ -75,8 +75,8 @@ def view_graph():
                     rid = 'n{}'.format(len(nodes_dict) + len(nodes))
                     nodes.append({'data': {'id': rid, 'label': t, 'width': len(t) * 10, 'shape': 'ellipse'}})
                     edges.append(
-                        {'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid + '\n\n',
-                                  'target': rid}})
+                            {'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid + '\n\n',
+                                      'target': rid}})
                 ibase += len(dp_edges) + 1
 
     for t in types:
