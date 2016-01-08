@@ -31,7 +31,7 @@ from agora.fountain.server import app
 
 __author__ = 'Fernando Serena'
 
-log = logging.getLogger('agora_fountain.schema')
+log = logging.getLogger('agora.fountain.schema')
 
 store_mode = app.config['STORE']
 if 'persist' in store_mode:
