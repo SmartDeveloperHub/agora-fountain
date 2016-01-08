@@ -38,7 +38,7 @@ setup(
         download_url="https://github.com/smartdeveloperhub/agora-fountain/tarball/0.5.1-alpha1",
         packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
         namespace_packages=['agora.fountain'],
-        install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'APScheduler', 'rdflib', 'networkx',
+        install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'rdflib', 'networkx',
                           'futures',
                           'rfc3987'],
         classifiers=[],
