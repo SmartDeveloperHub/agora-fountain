@@ -23,21 +23,37 @@
 """
 
 from setuptools import setup, find_packages
+import os
+import re
 
 __author__ = 'Fernando Serena'
 
+module_file = open("agora/fountain/__init__.py").read()
+metadata = dict(re.findall("__([a-z]+)__\s*=\s*'([^']+)'", module_file))
+
+
+# def get_version():
+#     VERSIONFILE = os.path.join('agora/fountain', '__init__.py')
+#     initfile_lines = open(VERSIONFILE, 'rt').readlines()
+#     VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
+#     for line in initfile_lines:
+#         mo = re.search(VSRE, line, re.M)
+#         if mo:
+#             return mo.group(1)
+#     raise RuntimeError('Unable to find version string in %s.' % (VERSIONFILE,))
+
 setup(
         name="Agora-Fountain",
-        version="0.5.1-alpha2",
-        author="Fernando Serena",
-        author_email="fernando.serena@centeropenmiddleware.com",
-        description="The Agora core service for ontology paths discovery and seed management",
+        version=metadata['version'],
+        author=metadata['author'],
+        author_email=metadata['email'],
+        description=metadata['description'],
         license="Apache 2",
         keywords=["linked-data", "ontology", "path"],
-        url="https://github.com/smartdeveloperhub/agora-fountain",
+        url=metadata['github'],
         download_url="https://github.com/smartdeveloperhub/agora-fountain/tarball/0.5.1-alpha1",
         packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
-        namespace_packages=['agora.fountain'],
+        namespace_packages=['agora', 'agora.fountain'],
         install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'rdflib', 'networkx',
                           'futures',
                           'rfc3987'],

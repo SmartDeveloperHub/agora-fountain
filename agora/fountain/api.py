@@ -72,6 +72,21 @@ def handle_invalid_usage(error):
     return response
 
 
+@app.route('/')
+def get_api():
+    from agora.fountain import __version__ as version
+    from agora.fountain import __author__ as author
+    from agora.fountain import __description__ as description
+    from agora.fountain import __email__ as email
+    from agora.fountain import __github__ as github
+    meta = {'version': version, 'author': author, 'description': description, 'email': email, 'github': github}
+    return jsonify({'meta': meta,
+                    'vocabularies': url_for('get_vocabularies', _external=True),
+                    'seeds': url_for('get_seeds', _external=True),
+                    'properties': url_for('get_properties', _external=True),
+                    'types': url_for('get_types', _external=True)})
+
+
 @app.route('/vocabs')
 def get_vocabularies():
     """
