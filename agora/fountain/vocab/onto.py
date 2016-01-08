@@ -21,17 +21,16 @@
   limitations under the License.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
-from rdflib.plugins.parsers.notation3 import BadSyntax
-
-__author__ = 'Fernando Serena'
-
 import StringIO
 import urlparse
 
 from rdflib import Graph, RDF
 from rdflib.namespace import OWL
+from rdflib.plugins.parsers.notation3 import BadSyntax
 
 import agora.fountain.vocab.schema as sch
+
+__author__ = 'Fernando Serena'
 
 
 class VocabularyException(Exception):

@@ -44,6 +44,12 @@ class InvalidSeedError(FountainError):
 
 
 def add_seed(uri, ty):
+    """
+
+    :param uri:
+    :param ty:
+    :return:
+    """
     from rfc3987 import parse
     parse(uri, rule='URI')
     type_found = False
@@ -64,6 +70,11 @@ def add_seed(uri, ty):
 
 
 def get_seed(sid):
+    """
+
+    :param sid:
+    :return:
+    """
     try:
         ty, uri = base64.b64decode(sid).split('|')
         if r.sismember('seeds:{}'.format(ty), base64.b64encode(uri)):
@@ -75,6 +86,11 @@ def get_seed(sid):
 
 
 def delete_seed(sid):
+    """
+
+    :param sid:
+    :return:
+    """
     try:
         ty, uri = base64.b64decode(sid).split('|')
         set_key = 'seeds:{}'.format(ty)
@@ -86,10 +102,19 @@ def delete_seed(sid):
 
 
 def delete_type_seeds(ty):
+    """
+
+    :param ty:
+    :return:
+    """
     r.delete('seeds:{}'.format(ty))
 
 
 def get_seeds():
+    """
+
+    :return:
+    """
     def iterator():
         seed_types = r.keys('seeds:*')
         for st in seed_types:
@@ -106,6 +131,11 @@ def get_seeds():
 
 
 def get_type_seeds(ty):
+    """
+
+    :param ty:
+    :return:
+    """
     try:
         t_dict = index.get_type(ty)
         all_seeds = set([])
