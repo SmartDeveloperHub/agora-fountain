@@ -25,7 +25,7 @@
 import pkg_resources
 
 __author__ = 'Fernando Serena'
-__version__ = '0.5.1-alpha7'
+__version__ = '0.5.1-alpha8'
 __description__ = 'The Agora core service for ontology paths discovery and seeds management'
 __email__ = 'fernando.serena@centeropenmiddleware.com'
 __github__ = 'https://github.com/SmartDeveloperHub/agora-fountain'

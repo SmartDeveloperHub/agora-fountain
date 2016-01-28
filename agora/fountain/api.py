@@ -72,7 +72,7 @@ def handle_invalid_usage(error):
     return response
 
 
-@app.route('/')
+@app.route('/api')
 def get_api():
     from agora.fountain import __version__ as version
     from agora.fountain import __author__ as author
