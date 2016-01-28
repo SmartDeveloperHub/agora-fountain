@@ -31,17 +31,6 @@ __author__ = 'Fernando Serena'
 module_file = open("agora/fountain/__init__.py").read()
 metadata = dict(re.findall("__([a-z]+)__\s*=\s*'([^']+)'", module_file))
 
-
-# def get_version():
-#     VERSIONFILE = os.path.join('agora/fountain', '__init__.py')
-#     initfile_lines = open(VERSIONFILE, 'rt').readlines()
-#     VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
-#     for line in initfile_lines:
-#         mo = re.search(VSRE, line, re.M)
-#         if mo:
-#             return mo.group(1)
-#     raise RuntimeError('Unable to find version string in %s.' % (VERSIONFILE,))
-
 setup(
         name="Agora-Fountain",
         version=metadata['version'],

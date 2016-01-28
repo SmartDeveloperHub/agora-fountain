@@ -44,9 +44,13 @@ pool = redis.ConnectionPool(host=redis_conf.get('host'), port=redis_conf.get('po
 r = redis.StrictRedis(connection_pool=pool)
 tpool = ThreadPoolExecutor(multiprocessing.cpu_count())
 
+
+log.info('Trying to connect to Redis at {}'.format(redis_conf))
 # Ping redis to check if it's ready
 requests = 0
 while True:
+    log.info('Checking Redis... ({})'.format(requests))
+    requests += 1
     try:
         r.keys('*')
         break

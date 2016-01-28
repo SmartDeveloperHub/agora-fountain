@@ -362,4 +362,5 @@ def find_path(elm):
 
 
 # Build the current graph on import
+log.info('Reconstructing path graph...')
 __build_directed_graph(graph=pgraph)

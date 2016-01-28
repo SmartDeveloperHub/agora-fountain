@@ -42,9 +42,9 @@ logger = logging.getLogger('agora')
 logger.addHandler(ch)
 logger.setLevel(log_level)
 
+logger.info('Loading API description...')
+from agora.fountain import api
 logger.info('Ready')
 
-from agora.fountain import api
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=app.config['PORT'], debug=False, use_reloader=False, threaded=False)
+# if __name__ == '__main__':
+app.run(host='0.0.0.0', port=app.config['PORT'], debug=False, use_reloader=False, threaded=False)
