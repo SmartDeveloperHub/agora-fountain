@@ -24,13 +24,6 @@
 
 import pkg_resources
 
-__author__ = 'Fernando Serena'
-__version__ = '0.5.2'
-__description__ = 'The Agora core service for ontology paths discovery and seeds management'
-__email__ = 'fernando.serena@centeropenmiddleware.com'
-__github__ = 'https://github.com/SmartDeveloperHub/agora-fountain'
-
-
 try:
     pkg_resources.declare_namespace(__name__)
 except ImportError:

@@ -22,32 +22,32 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 
+import json
+
 from setuptools import setup, find_packages
-import os
-import re
 
 __author__ = 'Fernando Serena'
 
-module_file = open("agora/fountain/__init__.py").read()
-metadata = dict(re.findall("__([a-z]+)__\s*=\s*'([^']+)'", module_file))
+with open("agora/fountain/metadata.json", 'r') as stream:
+    metadata = json.load(stream)
 
 setup(
-        name="Agora-Fountain",
-        version=metadata['version'],
-        author=metadata['author'],
-        author_email=metadata['email'],
-        description=metadata['description'],
-        license="Apache 2",
-        keywords=["linked-data", "ontology", "path"],
-        url=metadata['github'],
-        download_url="https://github.com/smartdeveloperhub/agora-fountain/tarball/0.5.1-alpha1",
-        packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
-        namespace_packages=['agora', 'agora.fountain'],
-        install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'rdflib', 'networkx',
-                          'futures',
-                          'rfc3987'],
-        classifiers=[],
-        scripts=['fountain'],
-        package_dir={'agora.fountain': 'agora/fountain', 'agora.fountain.server': 'agora/fountain/server'},
-        package_data={'agora.fountain.server': ['templates/*.*', 'static/*.*']},
+    name="Agora-Fountain",
+    version=metadata['version'],
+    author=metadata['author'],
+    author_email=metadata['email'],
+    description=metadata['description'],
+    license="Apache 2",
+    keywords=["linked-data", "ontology", "path"],
+    url=metadata['github'],
+    download_url="https://github.com/smartdeveloperhub/agora-fountain/tarball/0.5.1-alpha1",
+    packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
+    namespace_packages=['agora', 'agora.fountain'],
+    install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'rdflib', 'networkx',
+                      'futures',
+                      'rfc3987'],
+    classifiers=[],
+    scripts=['fountain'],
+    package_dir={'agora.fountain': 'agora/fountain', 'agora.fountain.server': 'agora/fountain/server'},
+    package_data={'agora.fountain.server': ['templates/*.*', 'static/*.*'], 'agora.fountain': ['metadata.json']},
 )

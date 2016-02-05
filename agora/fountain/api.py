@@ -23,10 +23,12 @@
 """
 
 import json
+import os
 
 from flask import make_response, request, jsonify, render_template, url_for
 from flask_negotiate import consumes
 
+import agora.fountain
 import agora.fountain.index.core as index
 import agora.fountain.index.seeds as seeds
 import agora.fountain.vocab.onto as vocs
@@ -37,6 +39,9 @@ from agora.fountain.view.path import view_path
 from agora.fountain.vocab.schema import prefixes
 
 __author__ = 'Fernando Serena'
+
+with open(os.path.join(agora.fountain.__path__[0], 'metadata.json'), 'r') as stream:
+    metadata = json.load(stream)
 
 
 class APIError(Exception):
@@ -74,13 +79,7 @@ def handle_invalid_usage(error):
 
 @app.route('/api')
 def get_api():
-    from agora.fountain import __version__ as version
-    from agora.fountain import __author__ as author
-    from agora.fountain import __description__ as description
-    from agora.fountain import __email__ as email
-    from agora.fountain import __github__ as github
-    meta = {'version': version, 'author': author, 'description': description, 'email': email, 'github': github}
-    return jsonify({'meta': meta,
+    return jsonify({'meta': metadata,
                     'vocabularies': url_for('get_vocabularies', _external=True),
                     'seeds': url_for('get_seeds', _external=True),
                     'properties': url_for('get_properties', _external=True),

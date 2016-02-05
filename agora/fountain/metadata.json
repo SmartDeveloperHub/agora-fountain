@@ -1,0 +1,7 @@
+{
+  "version": "0.5.2",
+  "author": "Fernando Serena",
+  "email": "fernando.serena@centeropenmiddleware.com",
+  "github": "https://github.com/smartdeveloperhub/agora-fountain",
+  "description": "The Agora core service for ontology paths discovery and seeds management"
+}
