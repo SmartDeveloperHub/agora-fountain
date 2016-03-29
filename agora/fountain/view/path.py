@@ -55,7 +55,7 @@ def view_path(elm, paths):
             if last_node is not None and (last_node, last_prop, ty) not in mem_edges:
                 edges.append(
                         {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
-                                  'label': last_prop + '\n\n\n',
+                                  'label': last_prop + '\n\a',
                                   'target': base64.b16encode(ty)}})
                 mem_edges.add((last_node, last_prop, ty))
             last_node = ty
@@ -67,7 +67,7 @@ def view_path(elm, paths):
             if (last_node, last_prop, elm) not in mem_edges:
                 edges.append(
                         {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
-                                  'label': last_prop + '\n\n\n',
+                                  'label': last_prop + '\n\a',
                                   'target': base64.b16encode(elm)}})
                 mem_edges.add((last_node, last_prop, elm))
         else:
@@ -85,7 +85,7 @@ def view_path(elm, paths):
                 if (last_node, elm, r) not in mem_edges:
                     edges.append(
                             {'data': {'id': 'e{}'.format(len(edges)), 'source': base64.b16encode(last_node),
-                                      'label': elm + '\n\n',
+                                      'label': elm + '\n\a',
                                       'target': base64.b16encode(r)}, 'classes': 'end'})
                     mem_edges.add((last_node, elm, r))
 

@@ -59,7 +59,7 @@ def view_graph():
             ran = [r for r in ran if not set.intersection(set(index.get_type(r).get('super')), set(ran))]
 
             op_edges = list(itertools.product(*[dom, ran]))
-            edges.extend([{'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid + '\n\n',
+            edges.extend([{'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid + '\n\a',
                                     'target': nodes_dict[tg]}} for i, (s, tg) in enumerate(op_edges)])
             ibase += len(op_edges) + 1
         else:
@@ -75,7 +75,7 @@ def view_graph():
                     rid = 'n{}'.format(len(nodes_dict) + len(nodes))
                     nodes.append({'data': {'id': rid, 'label': t, 'width': len(t) * 10, 'shape': 'ellipse'}})
                     edges.append(
-                            {'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid + '\n\n',
+                        {'data': {'id': 'e{}'.format(ibase + i), 'source': nodes_dict[s], 'label': nid + '\n\a',
                                       'target': rid}})
                 ibase += len(dp_edges) + 1
 

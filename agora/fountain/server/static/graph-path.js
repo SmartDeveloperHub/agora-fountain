@@ -20,7 +20,14 @@ $(function () { // on dom ready
                 'background-opacity': 0.2,
                 'font-weight': 'regular',
                 'font-family': 'EagerNaturalist',
-                'font-size': '22px'
+                'font-size': '22px',
+                'border-width': 1,
+                'border-opacity': 0.3,
+                'shadow-color': '#484849',
+                'shadow-opacity': 0.3,
+                'shadow-offset-x': 0,
+                'shadow-offset-y': 0,
+                'shadow-blur': 2
             })
             .selector('edge')
             .css({
@@ -31,7 +38,6 @@ $(function () { // on dom ready
                 'content': 'data(label)',
                 'color': '#484849',
                 'edge-text-rotation': 'autorotate',
-                'text-valign': 'top',
                 'text-wrap': 'wrap',
                 'curve-style': 'bezier',
                 'font-family': 'EagerNaturalist',
@@ -39,8 +45,7 @@ $(function () { // on dom ready
             }).selector('edge.highlighted')
             .css({
                 'transition-property': 'line-color, target-arrow-color, color, border-width, shadow-color, visibility',
-                'transition-duration': '0.8s',
-                'visibility': 'visible'
+                'transition-duration': '0.8s'
             }).selector('node.highlighted')
             .css({
                 'transition-property': 'background-color, line-color, target-arrow-color, color, border-width, shadow-color, visibility',
@@ -90,48 +95,36 @@ $(function () { // on dom ready
         }
     });
 
-    var options = {
-        name: 'arbor',
-
-        animate: true, // whether to show the layout as it's running
-        maxSimulationTime: 4000, // max length in ms to run the layout
-        fit: false, // on every layout reposition of nodes, fit the viewport
-        padding: 30, // padding around the simulation
-        boundingBox: undefined, //{x1: 0, y1: 0, w: 1000, h: 1000}, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
-        ungrabifyWhileSimulating: false, // so you can't drag nodes during layout
-
-        // callbacks on layout events
-        ready: undefined, // callback on layoutready
-        stop: undefined, // callback on layoutstop
-
-        // forces used by arbor (use arbor default on undefined)
-        repulsion: 2000,
-        stiffness: undefined,
-        friction: 0.9,
-        gravity: true,
-        fps: undefined,
-        precision: 0.9,
-
-        // static numbers or functions that dynamically return what these
-        // values should be for each element
-        // e.g. nodeMass: function(n){ return n.data('weight') }
-        nodeMass: undefined,
-        edgeLength: undefined,
-
-        stepSize: 0.2, // smoothing of arbor bounding box
-
-        // function that returns true if the system is stable to indicate
-        // that the layout can be stopped
-        stableEnergy: function (energy) {
-            var e = energy;
-            return (e.max <= 0.5) || (e.mean <= 0.3);
-        },
-
-        // infinite layout options
-        infinite: true // overrides all other options for a forces-all-the-time mode
+    var params = {
+        name: 'cola',
+        animate: true, // whether to transition the node positions
+        maxSimulationTime: 3000, // max length in ms to run the layout
+        nodeSpacing: 100, // min spacing between outside of nodes (used for radius adjustment)
+        edgeLengthVal: 80,
+        boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
+        avoidOverlap: true, // prevents node overlap, may overflow boundingBox if not enough space
+        infinite: false,
+        fit: true,
+        randomize: false
     };
 
-    cy.layout(options);
+    console.log(vGraph.edges)
+
+    var layout = makeLayout();
+    layout.run();
+
+    function makeLayout(opts) {
+        params.randomize = false;
+        params.edgeLength = function (e) {
+            return 200;
+        };
+
+        for (var i in opts) {
+            params[i] = opts[i];
+        }
+
+        return cy.makeLayout(params);
+    }
 
     cy.bfs = [];
 
