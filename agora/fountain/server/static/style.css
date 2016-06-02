@@ -12,8 +12,13 @@
     font-style: normal;
 }
 
+@font-face {
+    font-family: Monoxil;
+    src: url("Monoxil.otf") format("opentype");
+}
+
 body {
-    font-family: EagerNaturalist, sans-serif;
+    font-family: Monoxil, sans-serif;
     background-image: url("paper.jpg");
     background-repeat: repeat;
     color: #484849;
@@ -31,10 +36,10 @@ body {
     position: absolute;
     right: 0;
     bottom: 0;
-    background-image: url("logo-sdh.png");
+    background-image: url("logo-agora.png");
     z-index: -1;
-    width: 200px;
-    height: 79px;
+    width: 210px;
+    height: 48px;
     background-repeat: no-repeat;
     margin: 15px;
 }
@@ -46,13 +51,13 @@ p {
 }
 
 body {
-  font: 14px helvetica neue, helvetica, arial, sans-serif;
+    font: 14px helvetica neue, helvetica, arial, sans-serif;
 }
 
 #cy {
-  height: 100%;
-  width: 100%;
-  position: absolute;
-  left: 0;
-  top: 0;
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
 }

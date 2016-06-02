@@ -12,13 +12,13 @@ $(function () { // on dom ready
             .css({
                 'content': 'data(label)',
                 'shape': 'data(shape)',
-                'width': 'mapData(width, 1, 300, 1, 300)',
+                'width': 'mapData(width, 10, 500, 10, 500)',
                 'height': '40',
                 'text-valign': 'center',
                 'background-color': 'white',
                 'background-opacity': 0.2,
-                'font-family': 'EagerNaturalist',
-                'font-size': '22px',
+                'font-family': 'Monoxil',
+                'font-size': '16px',
                 'color': '#484849',
                 'border-width': 2,
                 'border-opacity': 0.7,
@@ -40,8 +40,8 @@ $(function () { // on dom ready
                 'text-valign': 'top',
                 'text-wrap': 'wrap',
                 'curve-style': 'bezier',
-                'font-family': 'EagerNaturalist',
-                'font-size': '18px'
+                'font-family': 'Monoxil',
+                'font-size': '14px'
             }).selector('edge.subclass')
             .css({
                 'line-style': 'dashed',
