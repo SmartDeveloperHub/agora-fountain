@@ -96,7 +96,7 @@ def prefixes(vid=None):
     context = graph
     if vid is not None:
         context = context.get_context(vid)
-    return list(context.namespaces())
+    return dict(context.namespaces())
 
 
 def contexts():
