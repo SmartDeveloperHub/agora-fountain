@@ -7,3 +7,4 @@ graph_store/
 *.xml
 dist/
 .coverage
+build/
