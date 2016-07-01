@@ -19,8 +19,7 @@
 
 body {
     font-family: Monoxil, sans-serif;
-    background-image: url("paper.jpg");
-    background-repeat: repeat;
+    background: url("paper.jpg") repeat;
     color: #484849;
 }
 
@@ -36,11 +35,10 @@ body {
     position: absolute;
     right: 0;
     bottom: 0;
-    background-image: url("logo-agora.png");
     z-index: -1;
     width: 210px;
     height: 48px;
-    background-repeat: no-repeat;
+    background: url("logo-agora.png") no-repeat;
     margin: 15px;
 }
 
