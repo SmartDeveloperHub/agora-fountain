@@ -55,7 +55,7 @@ class DevelopmentConfig(Config):
 class TestingConfig(Config):
     DEBUG = False
     LOG = logging.DEBUG
-    REDIS = _redis_conf('localhost', 2, 6379)
+    REDIS = _redis_conf('localhost', 1, 6379)
     TESTING = True
     STORE = 'memory'
 
