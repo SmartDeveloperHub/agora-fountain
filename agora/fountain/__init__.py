@@ -24,6 +24,8 @@
 
 import pkg_resources
 
+__author__ = 'Fernando Serena'
+
 try:
     pkg_resources.declare_namespace(__name__)
 except ImportError:
