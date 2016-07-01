@@ -38,6 +38,10 @@ def _redis_conf(def_host, def_db, def_port):
             'port': os.environ.get('FOUNTAIN_DB_PORT', def_port)}
 
 
+def _store_conf(def_store):
+    return os.environ.get('STORE', def_store)
+
+
 class Config(object):
     STORE_PATHS = {
         'graph': 'graph_store'
@@ -49,7 +53,7 @@ class DevelopmentConfig(Config):
     DEBUG = True
     LOG = logging.DEBUG
     REDIS = _redis_conf('localhost', 1, 6379)
-    STORE = 'persist'
+    STORE = _store_conf('persist')
 
 
 class TestingConfig(Config):
@@ -57,11 +61,11 @@ class TestingConfig(Config):
     LOG = logging.DEBUG
     REDIS = _redis_conf('localhost', 1, 6379)
     TESTING = True
-    STORE = 'memory'
+    STORE = _store_conf('memory')
 
 
 class ProductionConfig(Config):
     DEBUG = False
     LOG = logging.INFO
     REDIS = _redis_conf('redis', 1, 6379)
-    STORE = 'persist'
+    STORE = _store_conf('persist')
