@@ -42,6 +42,10 @@ def _store_conf(def_store):
     return os.environ.get('STORE', def_store)
 
 
+def _debug_conf(def_debug):
+    return bool(os.environ.get('DEBUG', def_debug))
+
+
 class Config(object):
     STORE_PATHS = {
         'graph': 'graph_store'
@@ -50,14 +54,14 @@ class Config(object):
 
 
 class DevelopmentConfig(Config):
-    DEBUG = True
+    DEBUG = _debug_conf(True)
     LOG = logging.DEBUG
     REDIS = _redis_conf('localhost', 1, 6379)
     STORE = _store_conf('persist')
 
 
 class TestingConfig(Config):
-    DEBUG = False
+    DEBUG = _debug_conf(False)
     LOG = logging.DEBUG
     REDIS = _redis_conf('localhost', 1, 6379)
     TESTING = True
@@ -65,7 +69,7 @@ class TestingConfig(Config):
 
 
 class ProductionConfig(Config):
-    DEBUG = False
+    DEBUG = _debug_conf(False)
     LOG = logging.INFO
     REDIS = _redis_conf('redis', 1, 6379)
     STORE = _store_conf('persist')
