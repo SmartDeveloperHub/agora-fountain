@@ -19,7 +19,7 @@ $(function () { // on dom ready
                 'background-color': 'white',
                 'background-opacity': 0.2,
                 'font-weight': 'regular',
-                'font-family': 'EagerNaturalist',
+                'font-family': 'Monoxil',
                 'font-size': '22px',
                 'border-width': 1,
                 'border-opacity': 0.3,
@@ -40,7 +40,7 @@ $(function () { // on dom ready
                 'edge-text-rotation': 'autorotate',
                 'text-wrap': 'wrap',
                 'curve-style': 'bezier',
-                'font-family': 'EagerNaturalist',
+                'font-family': 'Monoxil',
                 'font-size': '18px'
             }).selector('edge.highlighted')
             .css({
