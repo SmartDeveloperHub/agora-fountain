@@ -108,8 +108,6 @@ $(function () { // on dom ready
         randomize: false
     };
 
-    console.log(vGraph.edges)
-
     var layout = makeLayout();
     layout.run();
 
