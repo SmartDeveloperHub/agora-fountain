@@ -40,7 +40,7 @@ setup(
     license="Apache 2",
     keywords=["linked-data", "ontology", "path"],
     url=metadata['github'],
-    download_url="https://github.com/smartdeveloperhub/agora-fountain/tarball/0.5.1-alpha1",
+    download_url="https://github.com/smartdeveloperhub/agora-fountain/tarball/{}".format(metadata['version']),
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     namespace_packages=['agora', 'agora.fountain'],
     install_requires=['flask', 'Flask-Negotiate', 'redis', 'hiredis', 'rdflib', 'networkx',
