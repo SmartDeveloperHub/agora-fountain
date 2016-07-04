@@ -26,4 +26,6 @@ __author__ = 'Fernando Serena'
 
 
 class FountainError(Exception):
+  """
+  """
     pass
