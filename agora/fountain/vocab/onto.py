@@ -22,6 +22,7 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
 import StringIO
+import logging
 import urlparse
 
 from rdflib import Graph, RDF
@@ -31,6 +32,8 @@ from rdflib.plugins.parsers.notation3 import BadSyntax
 import agora.fountain.vocab.schema as sch
 
 __author__ = 'Fernando Serena'
+
+log = logging.getLogger('agora.fountain.onto')
 
 
 class VocabularyException(Exception):
@@ -52,13 +55,14 @@ class UnknownVocabulary(VocabularyException):
 def __load_owl(owl):
     """
 
-    :param owl:
+    :param owl: The ontology to be loaded to the fountain
     :return:
     """
     owl_g = Graph()
     for f in ['turtle', 'xml']:
         try:
             owl_g.parse(source=StringIO.StringIO(owl), format=f)
+            log.debug('Parsed ontology in {} format'.format(f))
             break
         except SyntaxError:
             pass
@@ -66,18 +70,21 @@ def __load_owl(owl):
     if not len(owl_g):
         raise VocabularyException()
 
-    try:
-        uri = list(owl_g.subjects(RDF.type, OWL.Ontology)).pop()
-        vid = [p for (p, u) in owl_g.namespaces() if uri in u and p != '']
-        imports = owl_g.objects(uri, OWL.imports)
-        if not len(vid):
-            vid = urlparse.urlparse(uri).path.split('/')[-1]
-        else:
-            vid = vid.pop()
+    found_ontos = list(owl_g.subjects(RDF.type, OWL.Ontology))
+    if len(found_ontos) != 1:
+        raise VocabularyNotFound("Incorrect number of ontology statements: {}".format(len(found_ontos)))
 
-        return vid, uri, owl_g, imports
-    except IndexError:
-        raise VocabularyNotFound()
+    uri = found_ontos.pop()
+
+    vid = [p for (p, u) in owl_g.namespaces() if uri in u and p != '']
+    imports = owl_g.objects(uri, OWL.imports)
+    if not len(vid):
+        vid = urlparse.urlparse(uri).path.split('/')[-1]
+    else:
+        vid = vid.pop()
+
+    # (identifier, ontology uri, graph, imports)
+    return vid, uri, owl_g, imports
 
 
 def add_vocabulary(owl):
@@ -94,9 +101,9 @@ def add_vocabulary(owl):
     sch.add_context(vid, owl_g)
     vids = [vid]
 
-    # TODO: Import referenced ontologies
+    # Add imported vocabularies
     for im_uri in imports:
-        print im_uri
+        log.debug('Importing {} from {}...'.format(im_uri, vid))
         im_g = Graph()
         try:
             im_g.load(im_uri, format='turtle')
@@ -104,17 +111,17 @@ def add_vocabulary(owl):
             try:
                 im_g.load(im_uri)
             except BadSyntax:
-                print 'bad syntax in {}'.format(im_uri)
+                log.error('bad syntax in {}'.format(im_uri))
 
         try:
             child_vids = add_vocabulary(im_g.serialize(format='turtle'))
             vids.extend(child_vids)
         except DuplicateVocabulary, e:
-            print 'already added'
+            log.debug('vocabulary already added: {}'.format(im_uri))
         except VocabularyNotFound, e:
-            print 'uri not found for {}'.format(im_uri)
+            log.warning('uri not found for {}'.format(im_uri))
         except Exception, e:
-            print e.message
+            log.error(e.message)
 
     return vids
 

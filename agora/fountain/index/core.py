@@ -178,13 +178,13 @@ def __extract_property(p, vid):
         raise FountainError(e.message)
 
 
-def __extract_types(vid):
+def __extract_types(vid, trace=None):
     """
 
     :param vid:
     :return:
     """
-    types = sch.get_types(vid)
+    types = sch.get_types(context=vid)
 
     other_vocabs = filter(lambda x: x != vid, vocs.get_vocabularies())
     dependent_types = set([])
@@ -203,21 +203,27 @@ def __extract_types(vid):
 
     types = set.union(set([(vid, t) for t in types]), dependent_types)
     futures = []
+    if trace is None:
+        trace = set([])
     # TODO: Catch exceptions from threadpool
     for v, t in types:
-        futures.append(tpool.submit(__extract_type, t, v))
+        if t not in trace:
+            futures.append(tpool.submit(__extract_type, t, v))
+            trace.add(t)
     for v, p in dependent_props:
-        futures.append(tpool.submit(__extract_property, p, v))
+        if p not in trace:
+            futures.append(tpool.submit(__extract_property, p, v))
+            trace.add(p)
     return types, futures
 
 
-def __extract_properties(vid):
+def __extract_properties(vid, trace=None):
     """
 
     :param vid:
     :return:
     """
-    properties = sch.get_properties(vid)
+    properties = sch.get_properties(context=vid)
 
     other_vocabs = filter(lambda x: x != vid, vocs.get_vocabularies())
     dependent_types = set([])
@@ -230,10 +236,16 @@ def __extract_properties(vid):
                 dependent_types.add((ovid, oty))
 
     futures = []
+    if trace is None:
+        trace = set([])
     for p in properties:
-        futures.append(tpool.submit(__extract_property, p, vid))
+        if p not in trace:
+            futures.append(tpool.submit(__extract_property, p, vid))
+            trace.add(p)
     for v, ty in dependent_types:
-        futures.append(tpool.submit(__extract_type, ty, v))
+        if ty not in trace:
+            futures.append(tpool.submit(__extract_type, ty, v))
+            trace.add(ty)
     return properties, futures
 
 
@@ -266,8 +278,9 @@ def extract_vocabulary(vid):
     log.info('Extracting vocabulary {}...'.format(vid))
     delete_vocabulary(vid)
     start_time = dt.now()
-    types, t_futures = __extract_types(vid)
-    properties, p_futures = __extract_properties(vid)
+    extracted = set([])
+    types, t_futures = __extract_types(vid, trace=extracted)
+    properties, p_futures = __extract_properties(vid, trace=extracted)
     for f in t_futures + p_futures:
         f.result()
     log.info('Done (in {}ms)'.format((dt.now() - start_time).total_seconds() * 1000))

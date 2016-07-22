@@ -25,28 +25,64 @@
 import logging
 
 from rdflib import ConjunctiveGraph, URIRef, BNode
+from rdflib.graph import Graph
 from rdflib.namespace import RDFS
 
 from agora.fountain.server import app
+from base64 import b64encode
 
 __author__ = 'Fernando Serena'
 
 log = logging.getLogger('agora.fountain.schema')
 
+
+class ContextGraph(ConjunctiveGraph):
+    cache = {}
+
+    def __init__(self, store='default', identifier=None):
+        super(ContextGraph, self).__init__(store, identifier)
+
+    def query(self, q, **kwargs):
+        if q not in self.cache:
+            r = set(super(ContextGraph, self).query(q))
+            ContextGraph.cache[q] = r
+        return ContextGraph.cache[q]
+
+    def remove_context(self, context):
+        super(ContextGraph, self).remove_context(context)
+        ContextGraph.cache = {}
+
+
 store_mode = app.config['STORE']
 if 'persist' in store_mode:
-    graph = ConjunctiveGraph('Sleepycat')
+    graph = ContextGraph('Sleepycat')
     graph.open('graph_store', create=True)
 else:
     graph = ConjunctiveGraph()
 
-log.info('Loading ontology...'),
 graph.store.graph_aware = False
 log.debug('\n{}'.format(graph.serialize(format='turtle')))
-log.info('Ready')
+log.info('Vocabulary loaded')
 
 _namespaces = {}
 _prefixes = {}
+
+
+def __context(f):
+    def wrap_function(*args, **kwargs):
+
+        cache_key = b64encode(f.__name__ + str(args) + str(kwargs))
+        if cache_key not in ContextGraph.cache:
+            context = kwargs.get('context', None)
+            if not isinstance(context, Graph):
+                kwargs['context'] = graph.get_context(context) if context is not None else graph
+
+            result = f(*args, **kwargs)
+            ContextGraph.cache[cache_key] = result
+
+        return ContextGraph.cache[cache_key]
+
+    return wrap_function
 
 
 def __flat_slice(lst):
@@ -62,14 +98,21 @@ def __flat_slice(lst):
     return set(filter(lambda x: x is not None, lst))
 
 
-def __q_name(uri):
+def __q_name(term):
     """
 
-    :param uri:
+    :param term:
     :return:
     """
-    q = uri.n3(graph.namespace_manager)
-    return q
+    n3_method = getattr(term, "n3", None)
+    if callable(n3_method):
+        return term.n3(graph.namespace_manager)
+    return term
+
+
+def __query(g, q):
+    result = g.query(q)
+    return set([__q_name(x) for x in __flat_slice(result)])
 
 
 def __extend_prefixed(pu):
@@ -155,269 +198,248 @@ def add_context(vid, g):
 
     _namespaces.update([(uri, prefix) for (prefix, uri) in graph.namespaces()])
     _prefixes.update([(prefix, uri) for (prefix, uri) in graph.namespaces()])
+    ContextGraph.cache = {}
 
 
-def get_types(vid=None):
+@__context
+def get_types(context=None):
     """
 
-    :param vid:
+    :param context:
     :return:
     """
-    context = graph
-    if vid is not None:
-        context = context.get_context(vid)
-    types = set([])
-    q_class_result = context.query(
-        """SELECT DISTINCT ?c ?x WHERE {
-             {
-               {?c a owl:Class}
-               UNION
-               {?c a rdfs:Class}
-               FILTER(isURI(?c))
-             }
-             UNION
-             {?c rdfs:subClassOf ?x FILTER(isURI(?x))}
-           }""")
-    classes_set = __flat_slice(q_class_result)
-    types.update([__q_name(c) for c in classes_set])
-    q_class_result = context.query(
-        """SELECT DISTINCT ?r ?d WHERE {
-             ?p a owl:ObjectProperty.
-             {?p rdfs:range ?r FILTER(isURI(?r)) }
-             UNION
-             {?p rdfs:domain ?d}
-           }""")
-    classes_set = __flat_slice(q_class_result)
-    types.update([__q_name(c) for c in classes_set])
-    types.update([__q_name(x[0]) for x in context.query(
-        """SELECT DISTINCT ?c WHERE {
-             {?r owl:allValuesFrom ?c .
-              ?r owl:onProperty ?p .
-              {?p a owl:ObjectProperty } UNION { ?c a owl:Class } }
-             UNION
-             {?a owl:someValuesFrom ?c .
-              ?a owl:onProperty ?p .
-              {?p a owl:ObjectProperty} UNION {?c a owl:Class } }
-             UNION
-             {?b owl:onClass ?c}
-             FILTER (isURI(?c))
-           }""")])
-
-    return types
-
-
-def get_properties(vid=None):
-    """
-
-    :param vid:
-    :return:
-    """
-    context = graph
-    if vid is not None:
-        context = context.get_context(vid)
-    properties = set([])
-    properties.update([__q_name(o or d) for (o, d) in
-                       context.query(
-                           """SELECT DISTINCT ?o ?d WHERE {
-                                {?d a rdf:Property}
+    return __query(context,
+                   """SELECT DISTINCT ?c WHERE {
+                        {
+                            {?c a owl:Class }
+                            UNION
+                            {?c a rdfs:Class }
+                            UNION
+                            {[] rdfs:subClassOf ?c }
+                        }
+                        UNION
+                        {
+                            {
+                                ?p a owl:ObjectProperty .
+                                { ?p rdfs:range ?c }
                                 UNION
-                                {?o a owl:ObjectProperty}
+                                { ?p rdfs:domain ?c }
+                            }
+                            UNION
+                            {
+                                ?r a owl:Restriction ;
+                                   owl:onProperty [] .
+                                { ?r owl:allValuesFrom ?c }
                                 UNION
-                                {?d a owl:DatatypeProperty}
+                                { ?r owl:someValuesFrom ?c }
                                 UNION
-                                {?r a owl:Restriction . ?r owl:onProperty ?o}
-                              }""")])
-    return properties
+                                { ?r owl:onClass ?c }
+                            }
+                        }
+                        FILTER(isURI(?c))
+                      }""")
 
 
-def get_property_domain(prop, vid=None):
+@__context
+def get_properties(context=None):
+    """
+
+    :param context:
+    :return:
+    """
+    return __query(context, """SELECT DISTINCT ?p WHERE {
+                                { ?p a rdf:Property }
+                                UNION
+                                { ?p a owl:ObjectProperty }
+                                UNION
+                                { ?p a owl:DatatypeProperty }
+                                UNION
+                                {
+                                    [] a owl:Restriction ;
+                                       owl:onProperty ?p .
+                                }
+                                FILTER(isURI(?p))
+                              }""")
+
+
+@__context
+def get_property_domain(prop, context=None):
     """
 
     :param prop:
-    :param vid:
+    :param context:
     :return:
     """
-    context = graph
-    if vid is not None:
-        context = context.get_context(vid)
-    dom = set([])
-    domain_set = set([__q_name(c[0]) for c in context.query(
-        """SELECT DISTINCT ?c WHERE {
-             { %s rdfs:domain ?c }
-             UNION
-             { ?c rdfs:subClassOf [ owl:onProperty %s ] }
-             FILTER (isURI(?c))
-           }""" % (prop, prop))])
-    dom.update(domain_set)
-    for t in domain_set:
-        dom.update(get_subtypes(t, vid))
-    return dom
+    super_dom = set([])
+    dom = __query(context, """SELECT DISTINCT ?c WHERE {
+                             { %s rdfs:domain ?c }
+                             UNION
+                             { ?c rdfs:subClassOf [ owl:onProperty %s ] }
+                             FILTER (isURI(?c))
+                           }""" % (prop, prop))
+    super_dom.update(dom)
+    for t in dom:
+        super_dom.update(get_subtypes(t, context=context))
+    return super_dom
 
 
-def is_object_property(prop, vid=None):
+@__context
+def is_object_property(prop, context=None):
     """
 
     :param prop:
-    :param vid:
+    :param context:
     :return:
     """
-    context = graph
-    if vid is not None:
-        context = context.get_context(vid)
-    type_res = context.query("""ASK {%s a owl:ObjectProperty}""" % prop)
-    object_evidence = [_ for _ in type_res].pop()
+    evidence = __query(context, """ASK {
+                                    { %s a owl:ObjectProperty }
+                                    UNION
+                                    {
+                                        ?r owl:onProperty %s .
+                                        { ?c a owl:Class }
+                                        UNION
+                                        { ?c rdfs:subClassOf [] }
+                                        UNION
+                                        {
+                                           ?r owl:onClass ?c .
+                                        }
+                                        UNION
+                                        {
+                                            ?r owl:someValuesFrom ?c .
+                                        }
+                                        UNION
+                                        {
+                                            ?r owl:allValuesFrom ?c .
+                                        }
+                                    }
+                                   }""" % (prop, prop))
 
-    if not object_evidence:
-        object_evidence = [_ for _ in
-                           context.query("""ASK {?r owl:onProperty %s.
-                                    {?r owl:onClass ?c} }""" % prop)].pop()
-    if not object_evidence:
-        object_evidence = [_ for _ in
-                           context.query("""ASK {?r owl:onProperty %s.
-                                    ?r owl:someValuesFrom ?c .
-                                    {?c a owl:Class} UNION {?c rdfs:subClassOf ?x} }""" % prop)].pop()
-
-    if not object_evidence:
-        object_evidence = [_ for _ in
-                           context.query("""ASK {?r owl:onProperty %s.
-                                    ?r owl:allValuesFrom ?c .
-                                    {?c a owl:Class} UNION {?c rdfs:subClassOf ?x} }""" % prop)].pop()
-    return object_evidence
+    return evidence.pop()
 
 
-def get_property_range(prop, vid=None):
+@__context
+def get_property_range(prop, context=None):
     """
 
     :param prop:
-    :param vid:
+    :param context:
     :return:
     """
-    context = graph
-    if vid is not None:
-        context = context.get_context(vid)
-    rang = set([])
-
-    range_set = set([__q_name(r[0]) for r in context.query(
-        """SELECT DISTINCT ?r WHERE {
-             {%s rdfs:range ?r}
-             UNION
-             {?d owl:onProperty %s. ?d owl:allValuesFrom ?r. FILTER(isURI(?r))}
-             UNION
-             {?d owl:onProperty %s. ?d owl:someValuesFrom ?r. FILTER(isURI(?r))}
-             UNION
-             {?d owl:onProperty %s. ?d owl:onClass ?r. FILTER(isURI(?r))}
-             UNION
-             {?d owl:onProperty %s. ?d owl:onDataRange ?r. FILTER(isURI(?r))}
-           }""" % (prop, prop, prop, prop, prop))])
-
-    rang.update(range_set)
-    for y in range_set:
-        rang.update(get_subtypes(y, vid))
-    return rang
+    super_rang = set([])
+    rang = __query(context, """SELECT DISTINCT ?r WHERE {
+                                  {%s rdfs:range ?r}
+                                  UNION
+                                  {
+                                        ?d owl:onProperty %s.
+                                        { ?d owl:allValuesFrom ?r }
+                                        UNION
+                                        { ?d owl:someValuesFrom ?r }
+                                        UNION
+                                        { ?d owl:onClass ?r }
+                                        UNION
+                                        { ?d owl:onDataRange ?r }
+                                  }
+                                  FILTER(isURI(?r))
+                                }""" % (prop, prop))
+    super_rang.update(rang)
+    for y in rang:
+        super_rang.update(get_subtypes(y, context=context))
+    return super_rang
 
 
-def get_property_inverses(prop, vid=None):
+@__context
+def get_property_inverses(prop, context=None):
     """
 
     :param prop:
-    :param vid:
+    :param context:
     :return:
     """
-    context = graph
-    if vid is not None:
-        context = context.get_context(vid)
-    inverses = set([])
-    inverses.update([__q_name(i[0]) for i in context.query(
-        """SELECT ?i WHERE {
-             {%s owl:inverseOf ?i}
-             UNION
-             {?i owl:inverseOf %s}
-           }""" % (prop, prop))])
-    return inverses
+    return __query(context, """SELECT DISTINCT ?i WHERE {
+                                 {%s owl:inverseOf ?i}
+                                 UNION
+                                 {?i owl:inverseOf %s}
+                               }""" % (prop, prop))
 
 
-def get_supertypes(ty, vid=None):
+@__context
+def get_supertypes(ty, context=None):
     """
 
     :param ty:
-    :param vid:
+    :param context:
     :return:
     """
-    context = graph
-    if vid is not None:
-        context = context.get_context(vid)
     res = map(lambda x: __q_name(x), filter(lambda y: isinstance(y, URIRef),
                                             context.transitive_objects(__extend_prefixed(ty), RDFS.subClassOf)))
     return set(filter(lambda x: str(x) != ty, res))
 
 
-def get_subtypes(ty, vid=None):
+@__context
+def get_subtypes(ty, context=None):
     """
 
     :param ty:
-    :param vid:
+    :param context:
     :return:
     """
-    context = graph
-    if vid is not None:
-        context = context.get_context(vid)
     res = map(lambda x: __q_name(x), filter(lambda y: isinstance(y, URIRef),
                                             context.transitive_subjects(RDFS.subClassOf, __extend_prefixed(ty))))
 
     return filter(lambda x: str(x) != ty, res)
 
 
-def get_type_properties(ty, vid=None):
+@__context
+def get_type_properties(ty, context=None):
     """
 
     :param ty:
-    :param vid:
+    :param context:
     :return:
     """
-    context = graph
-    if vid is not None:
-        context = context.get_context(vid)
     props = set([])
-    all_types = get_supertypes(ty, vid)
+    all_types = get_supertypes(ty, context=context)
     all_types.add(ty)
-    for sc in all_types:
-        props.update(
-            [__q_name(p[0]) for p in context.query(
-                """SELECT ?p WHERE {
-                     {%s rdfs:subClassOf [ owl:onProperty ?p ]}
-                     UNION
-                     {?p rdfs:domain %s}
-                     FILTER (isURI(?p))
-                   }""" % (sc, sc))])
+    all_class_props = context.query("""SELECT DISTINCT ?c ?p WHERE {
+                                            {?c rdfs:subClassOf [ owl:onProperty ?p ]}
+                                            UNION
+                                            {?p rdfs:domain ?c}
+                                            FILTER (isURI(?p) && isURI(?c))
+                                          }""")
+
+    for r in all_class_props:
+        if __q_name(r.c) in all_types:
+            props.add(__q_name(r.p))
+
     return props
 
 
-def get_type_references(ty, vid=None):
+@__context
+def get_type_references(ty, context=None):
     """
 
     :param ty:
-    :param vid:
+    :param context:
     :return:
     """
-    context = graph
-    if vid is not None:
-        context = context.get_context(vid)
     refs = set([])
-    all_types = get_supertypes(ty, vid)
+    all_types = get_supertypes(ty, context=context)
     all_types.add(ty)
-    for sc in all_types:
-        refs.update(
-            [__q_name(p[0]) for p in context.query(
-                """SELECT ?p WHERE {
-                    { ?r owl:onProperty ?p.
-                      {?r owl:someValuesFrom %s}
-                      UNION
-                      {?r owl:allValuesFrom %s}
-                      UNION
-                      {?r owl:onClass %s}
-                    }
-                    UNION
-                    {?p rdfs:range %s}
-                    FILTER (isURI(?p))
-                  }""" % (sc, sc, sc, sc))])
+    all_class_props = context.query("""SELECT ?c ?p WHERE {
+                                        { ?r owl:onProperty ?p.
+                                          {?r owl:someValuesFrom ?c}
+                                          UNION
+                                          {?r owl:allValuesFrom ?c}
+                                          UNION
+                                          {?r owl:onClass ?c}
+                                        }
+                                        UNION
+                                        {?p rdfs:range ?c}
+                                        FILTER (isURI(?p) && isURI(?c))
+                                       }""")
+
+    for r in all_class_props:
+        if __q_name(r.c) in all_types:
+            refs.add(__q_name(r.p))
+
     return refs

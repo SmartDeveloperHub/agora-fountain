@@ -21,6 +21,7 @@
   limitations under the License.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=#
 """
+import os
 
 __author__ = 'Fernando Serena'
 
@@ -44,6 +45,22 @@ def setup():
 
     from agora.fountain.index.core import r
     r.flushdb()
+
+    log_level = os.environ.get('LOG_LEVEL')
+    if log_level is None:
+        log_level = app.config['LOG']
+
+    log_level = logging.INFO
+
+    ch = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    ch.setLevel(log_level)
+    logger = logging.getLogger('agora')
+    logger.addHandler(ch)
+    logger.setLevel(log_level)
+
+    logger.info('Loading API description...')
 
     from agora.fountain import api
 
