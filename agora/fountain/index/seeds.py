@@ -26,9 +26,14 @@ import base64
 
 from agora.fountain.exceptions import FountainError
 from agora.fountain.index import core as index
+from agora.fountain.cache import Cache
 from agora.fountain.index.core import r
 
 __author__ = 'Fernando Serena'
+
+
+cache = Cache()
+cache.watch(index.sch.cache)
 
 
 class TypeNotAvailableError(FountainError):
@@ -66,6 +71,7 @@ def add_seed(uri, ty):
     if not type_found:
         raise TypeNotAvailableError("{} is not a valid type".format(ty))
 
+    cache.clear()
     return base64.b64encode('{}|{}'.format(ty, uri))
 
 
@@ -100,6 +106,8 @@ def delete_seed(sid):
     except TypeError as e:
         raise InvalidSeedError(e.message)
 
+    cache.clear()
+
 
 def delete_type_seeds(ty):
     """
@@ -108,6 +116,7 @@ def delete_type_seeds(ty):
     :return:
     """
     r.delete('seeds:{}'.format(ty))
+    cache.clear()
 
 
 def get_seeds():
@@ -115,6 +124,7 @@ def get_seeds():
 
     :return:
     """
+
     def iterator():
         seed_types = r.keys('seeds:*')
         for st in seed_types:

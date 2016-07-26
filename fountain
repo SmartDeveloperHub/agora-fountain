@@ -36,8 +36,8 @@ if log_level is None:
 
 ch = logging.StreamHandler()
 line_div = '-' * 80
-formatter = logging.Formatter(line_div +
-                              '\n%(levelname)s in %(module)s [%(pathname)s:%(lineno)d]:\n%(message)s\n' + line_div)
+
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
 ch.setLevel(log_level)
 logger = logging.getLogger('agora')
@@ -49,5 +49,4 @@ from agora.fountain import api
 
 logger.info('Ready')
 
-# if __name__ == '__main__':
 app.run(host='0.0.0.0', port=app.config['PORT'], debug=False, use_reloader=False, threaded=False)

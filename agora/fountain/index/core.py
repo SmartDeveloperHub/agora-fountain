@@ -27,11 +27,13 @@ import sys
 from datetime import datetime as dt
 
 import redis
+from concurrent.futures import wait
 from concurrent.futures.thread import ThreadPoolExecutor
 from redis.exceptions import RedisError, BusyLoadingError
 
 import agora.fountain.vocab.onto as vocs
 import agora.fountain.vocab.schema as sch
+from agora.fountain.cache import cached
 from agora.fountain.exceptions import FountainError
 from agora.fountain.server import app
 
@@ -281,12 +283,12 @@ def extract_vocabulary(vid):
     extracted = set([])
     types, t_futures = __extract_types(vid, trace=extracted)
     properties, p_futures = __extract_properties(vid, trace=extracted)
-    for f in t_futures + p_futures:
-        f.result()
+    wait(p_futures + t_futures)
     log.info('Done (in {}ms)'.format((dt.now() - start_time).total_seconds() * 1000))
     return types, properties
 
 
+@cached(sch.cache)
 def get_types(vid=None):
     """
 
@@ -306,6 +308,7 @@ def get_types(vid=None):
     return vid_types
 
 
+@cached(sch.cache)
 def get_properties(vid=None):
     """
 
@@ -325,6 +328,7 @@ def get_properties(vid=None):
     return vid_props
 
 
+@cached(sch.cache)
 def get_property(prop):
     """
 
@@ -361,6 +365,7 @@ def get_property(prop):
     return {'domain': list(domain), 'range': list(rang), 'inverse': list(inv), 'type': ty}
 
 
+@cached(sch.cache)
 def is_property(prop):
     """
 
@@ -373,6 +378,7 @@ def is_property(prop):
         raise FountainError(e.message)
 
 
+@cached(sch.cache)
 def is_type(ty):
     """
 
@@ -385,6 +391,7 @@ def is_type(ty):
         raise FountainError(e.message)
 
 
+@cached(sch.cache)
 def get_type(ty):
     """
 

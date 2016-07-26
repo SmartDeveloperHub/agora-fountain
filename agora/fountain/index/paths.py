@@ -30,6 +30,7 @@ import networkx as nx
 from concurrent.futures import wait, ALL_COMPLETED
 from concurrent.futures.thread import ThreadPoolExecutor
 
+from agora.fountain.cache import cached
 from agora.fountain.index import core as index, seeds
 
 __author__ = 'Fernando Serena'
@@ -39,18 +40,6 @@ log = logging.getLogger('agora.fountain.paths')
 pgraph = nx.DiGraph()
 match_elm_cycles = {}
 th_pool = ThreadPoolExecutor(multiprocessing.cpu_count())
-
-
-def chunks(l, n):
-    """
-    Yield successive n-sized chunks from l.
-    :param l:
-    :param n:
-    :return:
-    """
-    if n:
-        for i in xrange(0, len(l), n):
-            yield l[i:i + n]
 
 
 def __build_directed_graph(generic=False, graph=None):
@@ -83,6 +72,72 @@ def __build_directed_graph(generic=False, graph=None):
 
     log.info('Known graph: {}'.format(list(graph.edges())))
     return graph
+
+
+def __store_paths(node_paths, g_cycles):
+    def __get_matching_cycles(_elm):
+        def __find_matching_cycles():
+            for j, c in enumerate(g_cycles):
+                extended_elm = [_elm]
+                if index.is_type(_elm):
+                    extended_elm.extend(index.get_type(_elm)["super"])
+
+                if len([c for e in extended_elm if e in c]):
+                    yield j
+
+        if _elm not in match_elm_cycles:
+            mc = set(__find_matching_cycles())
+            match_elm_cycles[_elm] = mc
+        return match_elm_cycles[_elm]
+
+    def __store_path(_i, _path):
+        pipe.zadd('paths:{}'.format(elm), _i, _path)
+
+    log.debug('preparing to persist the calculated paths...{}'.format(len(node_paths)))
+
+    with index.r.pipeline() as pipe:
+        pipe.multi()
+        for (elm, paths) in node_paths:
+            futures = []
+            for (i, path) in enumerate(paths):
+                futures.append(th_pool.submit(__store_path, i, path))
+            wait(futures)
+            pipe.execute()
+
+        # Store type and property cycles
+        for elm in match_elm_cycles.keys():
+            for c in match_elm_cycles[elm]:
+                pipe.sadd('cycles:{}'.format(elm), c)
+        pipe.execute()
+        for t in [_ for _ in index.get_types() if _ not in match_elm_cycles]:
+            for c in __get_matching_cycles(t):
+                pipe.sadd('cycles:{}'.format(t), c)
+        pipe.execute()
+
+
+def __find_cycles():
+    g_graph = __build_directed_graph(generic=True)
+    cycle_keys = index.r.keys('*cycles*')
+    for ck in cycle_keys:
+        index.r.delete(ck)
+    g_cycles = list(nx.simple_cycles(g_graph))
+    with index.r.pipeline() as pipe:
+        pipe.multi()
+        for i, cy in enumerate(g_cycles):
+            print cy
+            cycle = []
+            t_cycle = None
+            for elm in cy:
+                if index.is_type(elm):
+                    t_cycle = elm
+                elif t_cycle is not None:
+                    cycle.append({'property': elm, 'type': t_cycle})
+                    t_cycle = None
+            if t_cycle is not None:
+                cycle.append({'property': cy[0], 'type': t_cycle})
+            pipe.zadd('cycles', i, cycle)
+        pipe.execute()
+    return g_cycles
 
 
 def __build_paths(node, root, steps=None, level=0, path_graph=None, cache=None):
@@ -148,126 +203,47 @@ def __build_paths(node, root, steps=None, level=0, path_graph=None, cache=None):
     return paths
 
 
+def __calculate_node_paths(paths, n, d):
+    log.debug('[START] Calculating paths to {} with data {}'.format(n, d))
+    _paths = []
+    if d.get('ty') == 'type':
+        for p in pgraph.predecessors(n):
+            log.debug('Following root [{}] predecessor property {}'.format(n, p))
+            _paths.extend(__build_paths(p, n))
+    else:
+        _paths.extend(__build_paths(n, n))
+    log.debug('[END] {} paths for {}'.format(len(_paths), n))
+    if len(_paths):
+        paths[n] = _paths
+
+
 def calculate_paths():
     """
 
     :return:
     """
-
-    def __find_matching_cycles(_elm):
-        for j, c in enumerate(g_cycles):
-            extended_elm = [_elm]
-            if index.is_type(_elm):
-                extended_elm.extend(index.get_type(_elm)["super"])
-
-            if len([c for e in extended_elm if e in c]):
-                yield j
-
-    def __store_path(_i, _path):
-        pipe.zadd('paths:{}'.format(elm), _i, _path)
-
-    def __calculate_node_paths(n, d):
-        log.debug('[START] Calculating paths to {} with data {}'.format(n, d))
-        _paths = []
-        if d.get('ty') == 'type':
-            for p in pgraph.predecessors(n):
-                log.debug('Following root [{}] predecessor property {}'.format(n, p))
-                _paths.extend(__build_paths(p, n))
-        else:
-            _paths.extend(__build_paths(n, n))
-        log.debug('[END] {} paths for {}'.format(len(_paths), n))
-        if len(_paths):
-            node_paths[n] = _paths
-
     log.info('Calculating paths...')
     match_elm_cycles.clear()
     start_time = dt.now()
 
     __build_directed_graph(graph=pgraph)
-    g_graph = __build_directed_graph(generic=True)
-
-    cycle_keys = index.r.keys('*cycles*')
-    for ck in cycle_keys:
-        index.r.delete(ck)
-    g_cycles = list(nx.simple_cycles(g_graph))
-    with index.r.pipeline() as pipe:
-        pipe.multi()
-        for i, cy in enumerate(g_cycles):
-            print cy
-            cycle = []
-            t_cycle = None
-            for elm in cy:
-                if index.is_type(elm):
-                    t_cycle = elm
-                elif t_cycle is not None:
-                    cycle.append({'property': elm, 'type': t_cycle})
-                    t_cycle = None
-            if t_cycle is not None:
-                cycle.append({'property': cy[0], 'type': t_cycle})
-            pipe.zadd('cycles', i, cycle)
-        pipe.execute()
-
-    locks = __lock_key_pattern('paths:*')
-    keys = [k for (k, _) in locks]
-    if len(keys):
-        index.r.delete(*keys)
+    g_cycles = __find_cycles()
 
     node_paths = {}
     futures = []
     for node, data in pgraph.nodes(data=True):
-        futures.append(th_pool.submit(__calculate_node_paths, node, data))
-    wait(futures, timeout=None, return_when=ALL_COMPLETED)
+        futures.append(th_pool.submit(__calculate_node_paths, node_paths, node, data))
+    wait(futures)
 
     for ty in [_ for _ in index.get_types() if _ in node_paths]:
         for sty in [_ for _ in index.get_type(ty)['sub'] if _ in node_paths]:
             node_paths[ty].extend(node_paths[sty])
 
     node_paths = node_paths.items()
-
-    log.debug('preparing to persist the calculated paths...{}'.format(len(node_paths)))
-
-    with index.r.pipeline() as pipe:
-        pipe.multi()
-        for (elm, paths) in node_paths:
-            futures = []
-            for (i, path) in enumerate(paths):
-                futures.append(th_pool.submit(__store_path, i, path))
-                for step in path:
-                    step_ty = step.get('type')
-                    if step_ty not in match_elm_cycles:
-                        match_elm_cycles[step_ty] = __find_matching_cycles(step_ty)
-                    step_pr = step.get('property')
-                    if step_pr not in match_elm_cycles:
-                        match_elm_cycles[step_pr] = __find_matching_cycles(step_pr)
-            wait(futures, timeout=None, return_when=ALL_COMPLETED)
-            pipe.execute()
-
-        # Store type and property cycles
-        for elm in match_elm_cycles.keys():
-            for c in match_elm_cycles[elm]:
-                pipe.sadd('cycles:{}'.format(elm), c)
-        pipe.execute()
-        for t in [_ for _ in index.get_types() if _ not in match_elm_cycles]:
-            for c in __find_matching_cycles(t):
-                pipe.sadd('cycles:{}'.format(t), c)
-        pipe.execute()
-
-    for _, l in locks:
-        l.release()
+    __store_paths(node_paths, g_cycles)
 
     log.info('Found {} paths in {}ms'.format(len(index.r.keys('paths:*')),
                                              (dt.now() - start_time).total_seconds() * 1000))
-
-
-def __lock_key_pattern(pattern):
-    """
-
-    :param pattern:
-    :return:
-    """
-    pattern_keys = index.r.keys(pattern)
-    for k in pattern_keys:
-        yield k, index.r.lock(k)
 
 
 def __detect_redundancies(source, steps):
@@ -296,6 +272,7 @@ def __detect_redundancies(source, steps):
     return steps
 
 
+@cached(seeds.cache)
 def find_path(elm):
     """
 
@@ -304,10 +281,10 @@ def find_path(elm):
     """
     seed_av = {}
 
-    def check_seed_availability(ty):
-        if ty not in seed_av:
-            seed_av[ty] = seeds.get_type_seeds(ty)
-        return seed_av[ty]
+    def check_seed_availability(t):
+        if t not in seed_av:
+            seed_av[t] = seeds.get_type_seeds(t)
+        return seed_av[t]
 
     def build_seed_path_and_identify_cycles(_seeds):
         """

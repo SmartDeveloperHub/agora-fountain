@@ -23,34 +23,34 @@
 """
 
 import logging
+from functools import wraps
 
 from rdflib import ConjunctiveGraph, URIRef, BNode
 from rdflib.graph import Graph
 from rdflib.namespace import RDFS
 
+from agora.fountain.cache import Cache, cached
 from agora.fountain.server import app
-from base64 import b64encode
 
 __author__ = 'Fernando Serena'
 
 log = logging.getLogger('agora.fountain.schema')
+cache = Cache()
 
 
 class ContextGraph(ConjunctiveGraph):
-    cache = {}
-
     def __init__(self, store='default', identifier=None):
         super(ContextGraph, self).__init__(store, identifier)
 
     def query(self, q, **kwargs):
-        if q not in self.cache:
+        if q not in cache:
             r = set(super(ContextGraph, self).query(q))
-            ContextGraph.cache[q] = r
-        return ContextGraph.cache[q]
+            cache[q] = r
+        return cache[q]
 
     def remove_context(self, context):
         super(ContextGraph, self).remove_context(context)
-        ContextGraph.cache = {}
+        return cache.clear()
 
 
 store_mode = app.config['STORE']
@@ -69,20 +69,14 @@ _prefixes = {}
 
 
 def __context(f):
-    def wrap_function(*args, **kwargs):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        context = kwargs.get('context', None)
+        if not isinstance(context, Graph):
+            kwargs['context'] = graph.get_context(context) if context is not None else graph
 
-        cache_key = b64encode(f.__name__ + str(args) + str(kwargs))
-        if cache_key not in ContextGraph.cache:
-            context = kwargs.get('context', None)
-            if not isinstance(context, Graph):
-                kwargs['context'] = graph.get_context(context) if context is not None else graph
-
-            result = f(*args, **kwargs)
-            ContextGraph.cache[cache_key] = result
-
-        return ContextGraph.cache[cache_key]
-
-    return wrap_function
+        return f(*args, **kwargs)
+    return cached(cache)(wrap)
 
 
 def __flat_slice(lst):
@@ -128,18 +122,6 @@ def __extend_prefixed(pu):
         return URIRef(_prefixes[parts[0]] + parts[1])
     except KeyError:
         return BNode(pu)
-
-
-def prefixes(vid=None):
-    """
-
-    :param vid:
-    :return:
-    """
-    context = graph
-    if vid is not None:
-        context = context.get_context(vid)
-    return dict(context.namespaces())
 
 
 def contexts():
@@ -198,7 +180,17 @@ def add_context(vid, g):
 
     _namespaces.update([(uri, prefix) for (prefix, uri) in graph.namespaces()])
     _prefixes.update([(prefix, uri) for (prefix, uri) in graph.namespaces()])
-    ContextGraph.cache = {}
+    cache.clear()
+
+
+@__context
+def prefixes(context=None):
+    """
+
+    :param context:
+    :return:
+    """
+    return dict(context.namespaces())
 
 
 @__context
@@ -211,30 +203,35 @@ def get_types(context=None):
     return __query(context,
                    """SELECT DISTINCT ?c WHERE {
                         {
-                            {?c a owl:Class }
-                            UNION
-                            {?c a rdfs:Class }
-                            UNION
-                            {[] rdfs:subClassOf ?c }
-                        }
-                        UNION
-                        {
+                            ?p a owl:ObjectProperty .
                             {
-                                ?p a owl:ObjectProperty .
                                 { ?p rdfs:range ?c }
                                 UNION
                                 { ?p rdfs:domain ?c }
                             }
+                        }
+                        UNION
+                        {
+                            { ?c a owl:Class }
                             UNION
+                            { ?c a rdfs:Class }
+                            UNION
+                            { [] rdfs:subClassOf ?c }
+                            UNION
+                            { ?c rdfs:subClassOf [] }
+                        }
+                        UNION
+                        {
+                            ?r a owl:Restriction ;
+                               owl:onProperty ?p .
                             {
-                                ?r a owl:Restriction ;
-                                   owl:onProperty [] .
+                                ?p a owl:ObjectProperty .
                                 { ?r owl:allValuesFrom ?c }
                                 UNION
                                 { ?r owl:someValuesFrom ?c }
-                                UNION
-                                { ?r owl:onClass ?c }
                             }
+                            UNION
+                            { ?r owl:onClass ?c }
                         }
                         FILTER(isURI(?c))
                       }""")
@@ -296,20 +293,23 @@ def is_object_property(prop, context=None):
                                     UNION
                                     {
                                         ?r owl:onProperty %s .
-                                        { ?c a owl:Class }
-                                        UNION
-                                        { ?c rdfs:subClassOf [] }
-                                        UNION
                                         {
-                                           ?r owl:onClass ?c .
+                                            { ?c a owl:Class }
+                                            UNION
+                                            { ?c rdfs:subClassOf [] }
                                         }
-                                        UNION
                                         {
-                                            ?r owl:someValuesFrom ?c .
-                                        }
-                                        UNION
-                                        {
-                                            ?r owl:allValuesFrom ?c .
+                                            {
+                                               ?r owl:onClass ?c .
+                                            }
+                                            UNION
+                                            {
+                                                ?r owl:someValuesFrom ?c .
+                                            }
+                                            UNION
+                                            {
+                                                ?r owl:allValuesFrom ?c .
+                                            }
                                         }
                                     }
                                    }""" % (prop, prop))
