@@ -69,7 +69,12 @@ _prefixes = {}
 
 
 def __context(f):
-    @wraps(f)
+    """
+    Given a context id, it injects the corresponding graph context
+    :param f: The actual function
+    :return:
+    """
+    @wraps(f)   # Required to let the cache uniquely identify the wrapped function
     def wrap(*args, **kwargs):
         context = kwargs.get('context', None)
         if not isinstance(context, Graph):
@@ -81,9 +86,8 @@ def __context(f):
 
 def __flat_slice(lst):
     """
-
-    :param lst:
-    :return:
+    Flatten a list of iterable elements that are containers
+    :return: A simple list with all flattened items
     """
     lst = list(lst)
     for i, _ in enumerate(lst):
