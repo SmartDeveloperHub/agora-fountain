@@ -212,6 +212,11 @@ def get_types(context=None):
                         }
                         UNION
                         {
+                            ?p a owl:DatatypeProperty .
+                            ?p rdfs:domain ?c .
+                        }
+                        UNION
+                        {
                             { ?c a owl:Class }
                             UNION
                             { ?c a rdfs:Class }
