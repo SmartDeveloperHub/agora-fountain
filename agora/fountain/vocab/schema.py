@@ -76,6 +76,7 @@ def __context(f):
             kwargs['context'] = graph.get_context(context) if context is not None else graph
 
         return f(*args, **kwargs)
+
     return cached(cache)(wrap)
 
 
@@ -85,7 +86,7 @@ def __flat_slice(lst):
     :param lst:
     :return:
     """
-    lst = list(lst)
+    lst = filter(lambda x: x, list(lst))
     for i, _ in enumerate(lst):
         while hasattr(lst[i], "__iter__") and not isinstance(lst[i], basestring):
             lst[i:i + 1] = lst[i]
@@ -122,6 +123,12 @@ def __extend_prefixed(pu):
         return URIRef(_prefixes[parts[0]] + parts[1])
     except KeyError:
         return BNode(pu)
+
+
+def __extend_with(f, context, *args):
+    args = __flat_slice(args)
+    extension = __flat_slice([f(t, context=context) for t in args])
+    return set.union(args, extension)
 
 
 def contexts():
@@ -216,15 +223,13 @@ def get_types(context=None):
                             ?p rdfs:domain ?c .
                         }
                         UNION
-                        {
-                            { ?c a owl:Class }
-                            UNION
-                            { ?c a rdfs:Class }
-                            UNION
-                            { [] rdfs:subClassOf ?c }
-                            UNION
-                            { ?c rdfs:subClassOf [] }
-                        }
+                        { ?c a owl:Class }
+                        UNION
+                        { ?c a rdfs:Class }
+                        UNION
+                        { [] rdfs:subClassOf ?c }
+                        UNION
+                        { ?c rdfs:subClassOf [] }
                         UNION
                         {
                             ?r a owl:Restriction ;
@@ -265,27 +270,6 @@ def get_properties(context=None):
 
 
 @__context
-def get_property_domain(prop, context=None):
-    """
-
-    :param prop:
-    :param context:
-    :return:
-    """
-    super_dom = set([])
-    dom = __query(context, """SELECT DISTINCT ?c WHERE {
-                             { %s rdfs:domain ?c }
-                             UNION
-                             { ?c rdfs:subClassOf [ owl:onProperty %s ] }
-                             FILTER (isURI(?c))
-                           }""" % (prop, prop))
-    super_dom.update(dom)
-    for t in dom:
-        super_dom.update(get_subtypes(t, context=context))
-    return super_dom
-
-
-@__context
 def is_object_property(prop, context=None):
     """
 
@@ -323,6 +307,25 @@ def is_object_property(prop, context=None):
 
 
 @__context
+def get_property_domain(prop, context=None):
+    """
+
+    :param prop:
+    :param context:
+    :return:
+    """
+    all_property_domains = context.query("""SELECT DISTINCT ?p ?c WHERE {
+                             { ?p rdfs:domain ?c }
+                             UNION
+                             { ?c rdfs:subClassOf [ owl:onProperty ?p ] }
+                             FILTER (isURI(?p) && isURI(?c))
+                           }""")
+
+    dom = map(lambda x: __q_name(x.c), filter(lambda x: __q_name(x.p) == prop, all_property_domains))
+    return __extend_with(get_subtypes, context, dom)
+
+
+@__context
 def get_property_range(prop, context=None):
     """
 
@@ -330,12 +333,11 @@ def get_property_range(prop, context=None):
     :param context:
     :return:
     """
-    super_rang = set([])
-    rang = __query(context, """SELECT DISTINCT ?r WHERE {
-                                  {%s rdfs:range ?r}
+    all_property_ranges = context.query("""SELECT DISTINCT ?p ?r WHERE {
+                                  {?p rdfs:range ?r}
                                   UNION
                                   {
-                                        ?d owl:onProperty %s.
+                                        ?d owl:onProperty ?p.
                                         { ?d owl:allValuesFrom ?r }
                                         UNION
                                         { ?d owl:someValuesFrom ?r }
@@ -344,12 +346,11 @@ def get_property_range(prop, context=None):
                                         UNION
                                         { ?d owl:onDataRange ?r }
                                   }
-                                  FILTER(isURI(?r))
-                                }""" % (prop, prop))
-    super_rang.update(rang)
-    for y in rang:
-        super_rang.update(get_subtypes(y, context=context))
-    return super_rang
+                                  FILTER(isURI(?p) && isURI(?r))
+                                }""")
+
+    rang = map(lambda x: __q_name(x.r), filter(lambda x: __q_name(x.p) == prop, all_property_ranges))
+    return __extend_with(get_subtypes, context, rang)
 
 
 @__context
@@ -402,9 +403,6 @@ def get_type_properties(ty, context=None):
     :param context:
     :return:
     """
-    props = set([])
-    all_types = get_supertypes(ty, context=context)
-    all_types.add(ty)
     all_class_props = context.query("""SELECT DISTINCT ?c ?p WHERE {
                                             {?c rdfs:subClassOf [ owl:onProperty ?p ]}
                                             UNION
@@ -412,11 +410,8 @@ def get_type_properties(ty, context=None):
                                             FILTER (isURI(?p) && isURI(?c))
                                           }""")
 
-    for r in all_class_props:
-        if __q_name(r.c) in all_types:
-            props.add(__q_name(r.p))
-
-    return props
+    all_types = __extend_with(get_supertypes, context, ty)
+    return set([__q_name(r.p) for r in all_class_props if __q_name(r.c) in all_types])
 
 
 @__context
@@ -427,9 +422,6 @@ def get_type_references(ty, context=None):
     :param context:
     :return:
     """
-    refs = set([])
-    all_types = get_supertypes(ty, context=context)
-    all_types.add(ty)
     all_class_props = context.query("""SELECT ?c ?p WHERE {
                                         { ?r owl:onProperty ?p.
                                           {?r owl:someValuesFrom ?c}
@@ -443,8 +435,5 @@ def get_type_references(ty, context=None):
                                         FILTER (isURI(?p) && isURI(?c))
                                        }""")
 
-    for r in all_class_props:
-        if __q_name(r.c) in all_types:
-            refs.add(__q_name(r.p))
-
-    return refs
+    all_types = __extend_with(get_supertypes, context, ty)
+    return set([__q_name(r.p) for r in all_class_props if __q_name(r.c) in all_types])
