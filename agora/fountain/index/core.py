@@ -69,7 +69,7 @@ if 'memory' in store_mode:
 
 def __get_by_pattern(pattern, func):
     """
-
+    
     :param pattern:
     :param func:
     :return:

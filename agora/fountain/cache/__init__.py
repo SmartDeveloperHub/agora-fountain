@@ -28,28 +28,40 @@ __author__ = 'Fernando Serena'
 
 
 class Cache(dict):
+    """
+    Special dictionary to be used as a cache that offers mechanisms to watch and clear (on cascade)
+    """
     def __init__(self, **kwargs):
         super(Cache, self).__init__(**kwargs)
-        self.__observers = []
+        self.__watchers = []
         self.stable = 1
 
     def watch(self, other):
+        # type: (Cache) -> None
+        """
+        :param other: Cache object to watch
+        """
         if isinstance(other, Cache):
-            if self not in other.__observers:
-                other.__observers.append(self)
+            if self not in other.__watchers:
+                other.__watchers.append(self)
 
     def clear(self):
+        # type: () -> None
+        """
+        Clear all data and send the message to all watchers
+        """
         super(Cache, self).clear()
-        for obs in self.__observers:
+        for obs in self.__watchers:
             obs.clear()
 
 
 def cached(cache, level=0):
+    # type: (Cache, int) -> Callable
     """
 
-    :param cache:
-    :param level:
-    :return:
+    :rtype: Callable
+    :param cache: The cache object to be used
+    :param level: Level at which cached data should be considered stable
     """
     def d(f):
         @wraps(f)
@@ -60,24 +72,7 @@ def cached(cache, level=0):
             if not cache.stable >= level or cache_key not in cache:
                 result = f(*args, **kwargs)
                 cache[cache_key] = result
-
             return cache[cache_key]
-
         return wrap
     return d
 
-
-def notify(cache):
-    """
-
-    :param cache:
-    :return:
-    """
-    def d(f):
-        @wraps(f)
-        def wrap(*args, **kwargs):
-            result = f(*args, **kwargs)
-            cache.clear()
-            return result
-        return wrap
-    return d
