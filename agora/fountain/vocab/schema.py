@@ -65,7 +65,7 @@ class ContextGraph(ConjunctiveGraph):
 
     def remove_context(self, context):
         super(ContextGraph, self).remove_context(context)
-        return cache.clear()
+        cache.clear()
 
     def get_context(self, identifier, quoted=False):
         return SubGraph(store=self.store, identifier=identifier,

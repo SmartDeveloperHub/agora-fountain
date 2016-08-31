@@ -31,6 +31,7 @@ class Cache(dict):
     def __init__(self, **kwargs):
         super(Cache, self).__init__(**kwargs)
         self.__observers = []
+        self.stable = 1
 
     def watch(self, other):
         if isinstance(other, Cache):
@@ -43,10 +44,11 @@ class Cache(dict):
             obs.clear()
 
 
-def cached(cache):
+def cached(cache, level=0):
     """
 
     :param cache:
+    :param level:
     :return:
     """
     def d(f):
@@ -55,7 +57,7 @@ def cached(cache):
             if not isinstance(cache, Cache):
                 raise AttributeError('Cache type is not valid')
             cache_key = b64encode(f.__name__ + str(args[0:]) + str(kwargs))
-            if cache_key not in cache:
+            if not cache.stable >= level or cache_key not in cache:
                 result = f(*args, **kwargs)
                 cache[cache_key] = result
 

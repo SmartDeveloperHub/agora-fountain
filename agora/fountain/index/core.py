@@ -288,7 +288,7 @@ def extract_vocabulary(vid):
     return types, properties
 
 
-@cached(sch.cache)
+@cached(sch.cache, level=1)
 def get_types(vid=None):
     """
 
@@ -308,7 +308,7 @@ def get_types(vid=None):
     return vid_types
 
 
-@cached(sch.cache)
+@cached(sch.cache, level=1)
 def get_properties(vid=None):
     """
 
@@ -328,7 +328,7 @@ def get_properties(vid=None):
     return vid_props
 
 
-@cached(sch.cache)
+@cached(sch.cache, level=1)
 def get_property(prop):
     """
 
@@ -365,7 +365,7 @@ def get_property(prop):
     return {'domain': list(domain), 'range': list(rang), 'inverse': list(inv), 'type': ty}
 
 
-@cached(sch.cache)
+@cached(sch.cache, level=1)
 def is_property(prop):
     """
 
@@ -378,7 +378,7 @@ def is_property(prop):
         raise FountainError(e.message)
 
 
-@cached(sch.cache)
+@cached(sch.cache, level=1)
 def is_type(ty):
     """
 
@@ -391,7 +391,7 @@ def is_type(ty):
         raise FountainError(e.message)
 
 
-@cached(sch.cache)
+@cached(sch.cache, level=1)
 def get_type(ty):
     """
 

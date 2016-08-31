@@ -36,7 +36,7 @@ from agora.fountain.index.paths import calculate_paths, find_path
 from agora.fountain.server import app
 from agora.fountain.view.graph import view_graph
 from agora.fountain.view.path import view_path
-from agora.fountain.vocab.schema import prefixes
+from agora.fountain.vocab.schema import prefixes, cache
 
 __author__ = 'Fernando Serena'
 
@@ -114,9 +114,11 @@ def get_vocabulary(vid):
 
 
 def __analyse_vocabularies(vids):
+    cache.stable = 0
     for vid in reversed(vids):
         index.extract_vocabulary(vid)
     calculate_paths()
+    cache.stable = 1
 
 
 def __check_seeds():
