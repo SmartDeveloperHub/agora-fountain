@@ -23,6 +23,7 @@
 """
 
 import logging
+from base64 import b64encode
 from functools import wraps
 
 from rdflib import ConjunctiveGraph, URIRef, BNode
@@ -38,19 +39,37 @@ log = logging.getLogger('agora.fountain.schema')
 cache = Cache()
 
 
+class SubGraph(Graph):
+    def __init__(self, store='default', identifier=None,
+                 namespace_manager=None):
+        super(SubGraph, self).__init__(store, identifier, namespace_manager)
+
+    def query(self, q, **kwargs):
+        key = b64encode(q + self.identifier)
+        if key not in cache:
+            r = set(super(SubGraph, self).query(q))
+            cache[key] = r
+        return cache[key]
+
+
 class ContextGraph(ConjunctiveGraph):
     def __init__(self, store='default', identifier=None):
         super(ContextGraph, self).__init__(store, identifier)
 
     def query(self, q, **kwargs):
-        if q not in cache:
+        key = b64encode(q + self.identifier)
+        if key not in cache:
             r = set(super(ContextGraph, self).query(q))
-            cache[q] = r
-        return cache[q]
+            cache[key] = r
+        return cache[key]
 
     def remove_context(self, context):
         super(ContextGraph, self).remove_context(context)
         return cache.clear()
+
+    def get_context(self, identifier, quoted=False):
+        return SubGraph(store=self.store, identifier=identifier,
+                        namespace_manager=self)
 
 
 store_mode = app.config['STORE']
@@ -58,7 +77,7 @@ if 'persist' in store_mode:
     graph = ContextGraph('Sleepycat')
     graph.open('graph_store', create=True)
 else:
-    graph = ConjunctiveGraph()
+    graph = ContextGraph()
 
 graph.store.graph_aware = False
 log.debug('\n{}'.format(graph.serialize(format='turtle')))
@@ -72,7 +91,7 @@ def __context(f):
     @wraps(f)
     def wrap(*args, **kwargs):
         context = kwargs.get('context', None)
-        if not isinstance(context, Graph):
+        if not isinstance(context, ContextGraph):
             kwargs['context'] = graph.get_context(context) if context is not None else graph
 
         return f(*args, **kwargs)
@@ -303,7 +322,7 @@ def is_object_property(prop, context=None):
                                     }
                                    }""" % (prop, prop))
 
-    return evidence.pop()
+    return False if not evidence else evidence.pop()
 
 
 @__context
