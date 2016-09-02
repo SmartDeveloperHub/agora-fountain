@@ -46,7 +46,6 @@ pool = redis.ConnectionPool(host=redis_conf.get('host'), port=redis_conf.get('po
 r = redis.StrictRedis(connection_pool=pool)
 tpool = ThreadPoolExecutor(multiprocessing.cpu_count())
 
-
 log.info('Trying to connect to Redis at {}'.format(redis_conf))
 # Ping redis to check if it's ready
 requests = 0
@@ -174,6 +173,10 @@ def __extract_property(p, vid):
                 pipe.sadd('vocabs:{}:properties:{}:_range'.format(vid, p), dc)
             for dc in list(sch.get_property_inverses(p)):
                 pipe.sadd('vocabs:{}:properties:{}:_inverse'.format(vid, p), dc)
+
+            for cn in list(sch.get_property_constraints(p)):
+                pipe.sadd('vocabs:{}:properties:{}:_cons'.format(vid, p), cn)
+
             pipe.set('vocabs:{}:properties:{}:_type'.format(vid, p), p_type())
             pipe.execute()
     except RedisError as e:
@@ -349,6 +352,8 @@ def get_property(prop):
     domain = reduce(set.union, __get_by_pattern('*:properties:{}:_domain'.format(prop), r.smembers), set([]))
     rang = reduce(set.union, __get_by_pattern('*:properties:{}:_range'.format(prop), r.smembers), set([]))
     inv = reduce(set.union, __get_by_pattern('*:properties:{}:_inverse'.format(prop), r.smembers), set([]))
+    cons = reduce(set.union, __get_by_pattern('*:properties:{}:_cons'.format(prop), r.smembers), set([]))
+    cons = map(lambda x: eval(x), cons)
 
     if len(inv):
         inverse_dr = [(get_inverse_domain(i), get_inverse_range(i)) for i in inv]
@@ -362,7 +367,11 @@ def get_property(prop):
     except IndexError:
         ty = 'object'
 
-    return {'domain': list(domain), 'range': list(rang), 'inverse': list(inv), 'type': ty}
+    return {'domain': list(domain),
+            'range': list(rang),
+            'inverse': list(inv),
+            'constraints': dict(cons),
+            'type': ty}
 
 
 @cached(sch.cache, level=1)

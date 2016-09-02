@@ -353,20 +353,20 @@ def get_property_range(prop, context=None):
     :return:
     """
     all_property_ranges = context.query("""SELECT DISTINCT ?p ?r WHERE {
-                                  {?p rdfs:range ?r}
-                                  UNION
-                                  {
-                                        ?d owl:onProperty ?p.
-                                        { ?d owl:allValuesFrom ?r }
-                                        UNION
-                                        { ?d owl:someValuesFrom ?r }
-                                        UNION
-                                        { ?d owl:onClass ?r }
-                                        UNION
-                                        { ?d owl:onDataRange ?r }
-                                  }
-                                  FILTER(isURI(?p) && isURI(?r))
-                                }""")
+                                              {?p rdfs:range ?r}
+                                              UNION
+                                              {
+                                                    ?d owl:onProperty ?p.
+                                                    { ?d owl:allValuesFrom ?r }
+                                                    UNION
+                                                    { ?d owl:someValuesFrom ?r }
+                                                    UNION
+                                                    { ?d owl:onClass ?r }
+                                                    UNION
+                                                    { ?d owl:onDataRange ?r }
+                                              }
+                                              FILTER(isURI(?p) && isURI(?r))
+                                            }""")
 
     rang = map(lambda x: __q_name(x.r), filter(lambda x: __q_name(x.p) == prop, all_property_ranges))
     return __extend_with(get_subtypes, context, rang)
@@ -385,6 +385,44 @@ def get_property_inverses(prop, context=None):
                                  UNION
                                  {?i owl:inverseOf %s}
                                }""" % (prop, prop))
+
+
+@__context
+def get_property_constraints(prop, context=None):
+    """
+
+    :param prop:
+    :param context:
+    :return:
+    """
+    all_property_domains = context.query("""SELECT DISTINCT ?p ?c WHERE {
+                                 { ?p rdfs:domain ?c }
+                                 UNION
+                                 { ?c rdfs:subClassOf [ owl:onProperty ?p ] }
+                                 FILTER (isURI(?p) && isURI(?c))
+                               }""")
+
+    dom = map(lambda x: __q_name(x.c), filter(lambda x: __q_name(x.p) == prop, all_property_domains))
+    dom_supertypes = [get_supertypes(d) for d in dom]
+    for d, s in zip(dom, dom_supertypes):
+        if set.intersection(set(s), set(dom)):
+            cons_range = __query(context, """SELECT DISTINCT ?r WHERE {
+                                              {
+                                                    %s rdfs:subClassOf ?d .
+                                                    ?d owl:onProperty %s.
+                                                    { ?d owl:allValuesFrom ?r }
+                                                    UNION
+                                                    { ?d owl:someValuesFrom ?r }
+                                                    UNION
+                                                    { ?d owl:onClass ?r }
+                                                    UNION
+                                                    { ?d owl:onDataRange ?r }
+                                              }
+                                              FILTER(isURI(?r))
+                                            }""" % (d, prop))
+            cons_range = __extend_with(get_subtypes, context, cons_range)
+            if cons_range:
+                yield (d, list(cons_range))
 
 
 @__context

@@ -43,6 +43,14 @@ th_pool = ThreadPoolExecutor(multiprocessing.cpu_count())
 
 
 def __build_directed_graph(generic=False, graph=None):
+
+    def dom_edge():
+        d_cons = p_dict['constraints'].get(d, None)
+        data = {'c': []}
+        if d_cons is not None:
+            data['c'] = d_cons
+        return d, node, data
+
     """
 
     :return:
@@ -64,11 +72,13 @@ def __build_directed_graph(generic=False, graph=None):
                 ran = filter(lambda x: not set.intersection(set(index.get_type(x)['super']), ran), ran)
             except TypeError:
                 pass
-        edges = [(d, node) for d in dom]
+        edges = []
+        edges.extend([dom_edge() for d in dom])
         if p_dict.get('type') == 'object':
             edges.extend([(node, r) for r in ran])
         graph.add_edges_from(edges)
-        graph.add_node(node, ty='prop', object=p_dict.get('type') == 'object', range=ran)
+        graph.add_node(node, ty='prop', object=p_dict.get('type') == 'object', range=ran,
+                       constraints=p_dict['constraints'])
 
     log.info('Known graph: {}'.format(list(graph.edges())))
     return graph
@@ -161,17 +171,25 @@ def __build_paths(node, root, steps=None, level=0, path_graph=None, cache=None):
         cache = {}
 
     log.debug(
-            '[{}][{}] building paths to {}, with root {} and {} previous steps'.format(root, level, node, root,
-                                                                                       len(steps)))
+        '[{}][{}] building paths to {}, with root {} and {} previous steps'.format(root, level, node, root,
+                                                                                   len(steps)))
 
     pred = set(pgraph.predecessors(node))
     for t in [x for x in pred]:
+        previous_type = root if not steps else steps[-1].get('type')
+        data = pgraph.get_edge_data(t, node)
+        if data['c']:
+            if previous_type not in data['c']:
+                # print 'applying some constraints here: {} -/ {} /-> {}'.format(t, node, previous_type)
+                continue
+
         new_path_graph = path_graph.copy()
         new_path_graph.add_nodes_from([t, node])
         new_path_graph.add_edges_from([(t, node)])
 
         step = {'property': node, 'type': t}
         path = [step]
+
         new_steps = steps[:]
         new_steps.append(step)
         log.debug('[{}][{}] added a new step {} in the path to {}'.format(root, level, (t, node), node))
@@ -196,10 +214,10 @@ def __build_paths(node, root, steps=None, level=0, path_graph=None, cache=None):
             paths.append(path)
 
     log.debug(
-            '[{}][{}] returning {} paths to {}, with root {} and {} previous steps'.format(root, level, len(paths),
-                                                                                           node,
-                                                                                           root,
-                                                                                           len(steps)))
+        '[{}][{}] returning {} paths to {}, with root {} and {} previous steps'.format(root, level, len(paths),
+                                                                                       node,
+                                                                                       root,
+                                                                                       len(steps)))
     return paths
 
 
